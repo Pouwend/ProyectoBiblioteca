@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Biblioteca;
+using Microsoft.Data.SqlClient;
 using SistemaControlPersonal.Core.Lib;
 using System;
 using System.Data;
@@ -133,9 +134,13 @@ namespace BibliotecaDAE.Formularios
             await LoadPrestamosAsync();
         }
 
-        private void btnLector_Click_1(object sender, EventArgs e)
+        private async void btnLector_Click_1(object sender, EventArgs e)
         {
+            using var lectorForm = new FrmLectores();
 
+            lectorForm.ShowDialog(this);
+
+            await LoadPrestamosAsync();
         }
     }
 }
