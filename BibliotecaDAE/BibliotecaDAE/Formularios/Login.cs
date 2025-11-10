@@ -50,7 +50,7 @@ namespace BibliotecaDAE
                 var cn = cnn.OpenDb();
 
                 using var cmd = cn.CreateCommand();
-                cmd.CommandText = "SELECT Password, Nombre, Rol, DUI FROM Usuario WHERE NombreUsuario = @user";
+                cmd.CommandText = "SELECT Password, Nombre, Rol, DUI FROM Usuario WHERE CAST(NombreUsuario AS VARBINARY(50)) = CAST(@user AS VARBINARY(50))";
                 cmd.Parameters.AddWithValue("@user", nombreUsuario);
 
                 using var reader = await cmd.ExecuteReaderAsync();
