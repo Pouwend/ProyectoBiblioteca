@@ -1,0 +1,75 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Mango\\source\\repos\\BibliotecaDAE\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|c:\\users\\mango\\source\\repos\\bibliotecadae\\bibliotecadae\\formularios\\prestamos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|solutionrelative:bibliotecadae\\formularios\\prestamos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|c:\\users\\mango\\source\\repos\\bibliotecadae\\bibliotecadae\\formularios\\prestamodetalle.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|solutionrelative:bibliotecadae\\formularios\\prestamodetalle.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|c:\\users\\mango\\source\\repos\\bibliotecadae\\bibliotecadae\\formularios\\login.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|solutionrelative:bibliotecadae\\formularios\\login.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "PrestamoDetalle.cs",
+              "DocumentMoniker": "C:\\Users\\Mango\\source\\repos\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\PrestamoDetalle.cs",
+              "RelativeDocumentMoniker": "BibliotecaDAE\\Formularios\\PrestamoDetalle.cs",
+              "ToolTip": "C:\\Users\\Mango\\source\\repos\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\PrestamoDetalle.cs*",
+              "RelativeToolTip": "BibliotecaDAE\\Formularios\\PrestamoDetalle.cs*",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-09T23:03:18.64Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Prestamos.cs",
+              "DocumentMoniker": "C:\\Users\\Mango\\source\\repos\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\Prestamos.cs",
+              "RelativeDocumentMoniker": "BibliotecaDAE\\Formularios\\Prestamos.cs",
+              "ToolTip": "C:\\Users\\Mango\\source\\repos\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\Prestamos.cs",
+              "RelativeToolTip": "BibliotecaDAE\\Formularios\\Prestamos.cs",
+              "ViewState": "AgIAAEMAAAAAAAAAAAAcwFEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-09T23:00:47.913Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Login.cs",
+              "DocumentMoniker": "C:\\Users\\Mango\\source\\repos\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\Login.cs",
+              "RelativeDocumentMoniker": "BibliotecaDAE\\Formularios\\Login.cs",
+              "ToolTip": "C:\\Users\\Mango\\source\\repos\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\Login.cs",
+              "RelativeToolTip": "BibliotecaDAE\\Formularios\\Login.cs",
+              "ViewState": "AgIAAB0AAAAAAAAAAAAIwBwAAABAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-09T22:56:54.426Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
