@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Mango\\source\\repos\\BibliotecaDAE\\BibliotecaDAE\\BibliotecaDAE.csproj": {}
+    "C:\\Biblioteca\\BibliotecaDAE\\BibliotecaDAE\\BibliotecaDAE.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Mango\\source\\repos\\BibliotecaDAE\\BibliotecaDAE\\BibliotecaDAE.csproj": {
+    "C:\\Biblioteca\\BibliotecaDAE\\BibliotecaDAE\\BibliotecaDAE.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Mango\\source\\repos\\BibliotecaDAE\\BibliotecaDAE\\BibliotecaDAE.csproj",
+        "projectUniqueName": "C:\\Biblioteca\\BibliotecaDAE\\BibliotecaDAE\\BibliotecaDAE.csproj",
         "projectName": "BibliotecaDAE",
-        "projectPath": "C:\\Users\\Mango\\source\\repos\\BibliotecaDAE\\BibliotecaDAE\\BibliotecaDAE.csproj",
+        "projectPath": "C:\\Biblioteca\\BibliotecaDAE\\BibliotecaDAE\\BibliotecaDAE.csproj",
         "packagesPath": "C:\\Users\\Mango\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Mango\\source\\repos\\BibliotecaDAE\\BibliotecaDAE\\obj\\",
+        "outputPath": "C:\\Biblioteca\\BibliotecaDAE\\BibliotecaDAE\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -62,6 +62,10 @@
             "Microsoft.SqlServer.Server": {
               "target": "Package",
               "version": "[1.0.0, )"
+            },
+            "System.Configuration.ConfigurationManager": {
+              "target": "Package",
+              "version": "[9.0.10, )"
             },
             "System.Data.SqlClient": {
               "target": "Package",

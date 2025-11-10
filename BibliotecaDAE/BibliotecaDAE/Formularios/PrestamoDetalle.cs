@@ -1,11 +1,10 @@
 using System;
 using System.Data;
 using System.Drawing;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Configuration;
 using Microsoft.Data.SqlClient;
+using SistemaControlPersonal.Core.Lib;
 
 namespace BibliotecaDAE
 {
@@ -24,7 +23,7 @@ namespace BibliotecaDAE
             RegisterEvents();
         }
 
-        private void RegisterEvents()   
+        private void RegisterEvents()
         {
             this.Load += async (_, __) => await LoadEjemplaresAsync();
             dgvEjemplares.SelectionChanged += DgvEjemplares_SelectionChanged;
@@ -33,24 +32,16 @@ namespace BibliotecaDAE
             btnCerrar.Click += (_, __) => this.Close();
         }
 
-        private string GetConnectionString()
-        {
-            try
-            {
-                var cs = ConfigurationManager.ConnectionStrings["Biblioteca"]?.ConnectionString;
-                if (!string.IsNullOrWhiteSpace(cs)) return cs;
-            }
-            catch { }
-            return "Data Source=(LocalDB)\\MSSQLLocalDB;Initial Catalog=Biblioteca;Integrated Security=True";
-        }
-
         private async Task LoadEjemplaresAsync()
         {
-            var cs = GetConnectionString();
             var dt = new DataTable();
+            Cnn cnn = null;
+
             try
             {
-                using var cn = new SqlConnection(cs);
+                cnn = new Cnn();
+                var cn = cnn.OpenDb();
+
                 using var cmd = cn.CreateCommand();
 
                 // Query con JOINs para mostrar información completa del libro
@@ -71,7 +62,6 @@ namespace BibliotecaDAE
                     GROUP BY e.IdEjemplar, e.IdLibro, e.CodigoEjemplar, e.EstadoEjemplar, e.FechaAdquisicion, lib.Titulo
                     ORDER BY e.IdEjemplar ASC";
 
-                await cn.OpenAsync();
                 using var reader = await cmd.ExecuteReaderAsync();
                 dt.Load(reader);
 
@@ -117,6 +107,13 @@ namespace BibliotecaDAE
             catch (Exception ex)
             {
                 MessageBox.Show("Error cargando Ejemplares: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (cnn != null)
+                {
+                    cnn.CloseDB();
+                }
             }
         }
 
@@ -172,12 +169,12 @@ namespace BibliotecaDAE
             if (int.TryParse(txtEdad.Text, out var eVal)) edad = eVal;
             var tipo = cbxTipo.SelectedItem?.ToString();
 
-            var cs = GetConnectionString();
+            Cnn cnn = null;
 
             try
             {
-                using var cn = new SqlConnection(cs);
-                await cn.OpenAsync();
+                cnn = new Cnn();
+                var cn = cnn.OpenDb();
 
                 // Verificar si ya existe un lector con ese DUI o Carnet
                 int? existingId = null;
@@ -275,6 +272,13 @@ namespace BibliotecaDAE
             catch (Exception ex)
             {
                 MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (cnn != null)
+                {
+                    cnn.CloseDB();
+                }
             }
         }
 
