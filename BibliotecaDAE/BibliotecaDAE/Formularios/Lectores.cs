@@ -1,3 +1,4 @@
+// IMPORTACIONES
 using Microsoft.Data.SqlClient;
 using SistemaControlPersonal.Core.Lib;
 using System;
@@ -10,6 +11,7 @@ namespace Biblioteca
 {
     public class FrmLectores : Form
     {
+        // DECLARACIÓN DE CONTROLES
         private DataGridView dgvLectores;
         private TextBox txtNombre, txtApellido, txtDireccion, txtTelefono, txtEmail, txtEdad, txtCarnet, txtDUI;
         private ComboBox cbxTipo;
@@ -18,30 +20,12 @@ namespace Biblioteca
         private GroupBox gbListadoLectores, gbDetalleLector;
         private TableLayoutPanel formLayout;
         private FlowLayoutPanel btnPanel;
-
         private TextBox txtIdLector;
         private ComboBox cbxEstado;
         private NumericUpDown numLimitePrestamos;
         private Button btnEliminar;
-        private void LimpiarCampos()
-        {
-            txtNombre.Clear();
-            txtApellido.Clear();
-            txtDireccion.Clear();
-            txtTelefono.Clear();
-            txtEmail.Clear();
-            txtEdad.Clear();
-            txtCarnet.Clear();
-            txtDUI.Clear();
-            txtIdLector.Clear();
 
-            cbxTipo.SelectedIndex = -1;
-            cbxEstado.SelectedIndex = -1;
-            numLimitePrestamos.Value = 3;
-
-            btnEliminar.Enabled = false;
-            txtNombre.Focus();
-        }
+        // CONSTRUCTOR E INICIALIZACIÓN
         public FrmLectores()
         {
             InitializeComponent();
@@ -60,6 +44,7 @@ namespace Biblioteca
             btnCerrar.Click += (_, __) => this.Close();
         }
 
+        // LÓGICA DE DATOS (ACCESO A BD)
         private async Task LoadLectoresAsync()
         {
             var dt = new DataTable();
@@ -77,6 +62,7 @@ namespace Biblioteca
                 dt.Load(reader);
 
                 dgvLectores.DataSource = dt;
+                // Ocultar columnas que no son necesarias en la vista principal
                 if (dgvLectores.Columns.Contains("IdLector")) dgvLectores.Columns["IdLector"].Visible = false;
                 if (dgvLectores.Columns.Contains("Direccion")) dgvLectores.Columns["Direccion"].Visible = false;
                 if (dgvLectores.Columns.Contains("Telefono")) dgvLectores.Columns["Telefono"].Visible = false;
@@ -96,35 +82,6 @@ namespace Biblioteca
                     cnn.CloseDB();
                 }
             }
-        }
-
-        private void DgvLectores_SelectionChanged(object? sender, EventArgs e)
-        {
-            if (dgvLectores.SelectedRows.Count == 0) return;
-
-            var row = dgvLectores.SelectedRows[0];
-
-            string GetString(string col) => row.Cells[col].Value != DBNull.Value ? row.Cells[col].Value.ToString() : string.Empty;
-
-            txtIdLector.Text = GetString("IdLector");
-            txtNombre.Text = GetString("Nombre");
-            txtApellido.Text = GetString("Apellido");
-            txtDireccion.Text = GetString("Direccion");
-            txtTelefono.Text = GetString("Telefono");
-            txtEmail.Text = GetString("Email");
-            txtEdad.Text = GetString("Edad");
-            txtCarnet.Text = GetString("Carnet");
-            txtDUI.Text = GetString("DUI");
-
-            cbxTipo.SelectedItem = GetString("TipoUsuario");
-            cbxEstado.SelectedItem = GetString("Estado");
-
-            if (int.TryParse(GetString("LimitePrestamos"), out int limite))
-                numLimitePrestamos.Value = limite;
-            else
-                numLimitePrestamos.Value = 3;
-
-            btnEliminar.Enabled = true;
         }
 
         private async Task GuardarLectorAsync()
@@ -177,6 +134,7 @@ namespace Biblioteca
 
                 if (idLector.HasValue)
                 {
+                    // Lógica de Actualización (UPDATE)
                     cmd.CommandText = @"
                         UPDATE dbo.Lector SET
                             Nombre = @nombre, Apellido = @apellido, Direccion = @direccion,
@@ -189,6 +147,7 @@ namespace Biblioteca
                 }
                 else
                 {
+                    // Lógica de Creación (INSERT)
                     cmd.CommandText = @"
                         INSERT INTO dbo.Lector
                             (Nombre, Apellido, Direccion, Telefono, Email, Edad, Carnet, DUI, TipoUsuario, Estado, LimitePrestamos)
@@ -196,6 +155,7 @@ namespace Biblioteca
                             (@nombre, @apellido, @direccion, @telefono, @email, @edad, @carnet, @dui, @tipo, @estado, @limite)";
                 }
 
+                // Asignación de parámetros (común para INSERT y UPDATE)
                 cmd.Parameters.Add(new SqlParameter("@nombre", SqlDbType.NVarChar, 50) { Value = nombre });
                 cmd.Parameters.Add(new SqlParameter("@apellido", SqlDbType.NVarChar, 50) { Value = apellido });
                 cmd.Parameters.Add(new SqlParameter("@direccion", SqlDbType.NVarChar, 200) { Value = (object?)direccion ?? DBNull.Value });
@@ -216,7 +176,7 @@ namespace Biblioteca
             }
             catch (SqlException ex)
             {
-                if (ex.Number == 2601 || ex.Number == 2627)
+                if (ex.Number == 2601 || ex.Number == 2627) // Violación de índice único (Carnet/DUI)
                     MessageBox.Show("Ya existe un lector registrado con ese Carnet o DUI.", "Error de duplicado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 else
                     MessageBox.Show("Error SQL: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -264,7 +224,7 @@ namespace Biblioteca
             }
             catch (SqlException ex)
             {
-                if (ex.Number == 547) // Error de Foreign Key
+                if (ex.Number == 547) // Error de Foreign Key (tiene préstamos)
                     MessageBox.Show("No se puede eliminar este lector, tiene préstamos asociados.", "Error de integridad", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 else
                     MessageBox.Show("Error SQL: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -280,8 +240,61 @@ namespace Biblioteca
                     cnn.CloseDB();
                 }
             }
-        } 
+        }
 
+        // MANEJADORES DE EVENTOS (UI)
+        private void DgvLectores_SelectionChanged(object? sender, EventArgs e)
+        {
+            if (dgvLectores.SelectedRows.Count == 0) return;
+
+            var row = dgvLectores.SelectedRows[0];
+
+            // Función local para obtener valores de forma segura
+            string GetString(string col) => row.Cells[col].Value != DBNull.Value ? row.Cells[col].Value.ToString() : string.Empty;
+
+            txtIdLector.Text = GetString("IdLector");
+            txtNombre.Text = GetString("Nombre");
+            txtApellido.Text = GetString("Apellido");
+            txtDireccion.Text = GetString("Direccion");
+            txtTelefono.Text = GetString("Telefono");
+            txtEmail.Text = GetString("Email");
+            txtEdad.Text = GetString("Edad");
+            txtCarnet.Text = GetString("Carnet");
+            txtDUI.Text = GetString("DUI");
+
+            cbxTipo.SelectedItem = GetString("TipoUsuario");
+            cbxEstado.SelectedItem = GetString("Estado");
+
+            if (int.TryParse(GetString("LimitePrestamos"), out int limite))
+                numLimitePrestamos.Value = limite;
+            else
+                numLimitePrestamos.Value = 3; // Valor por defecto si falla
+
+            btnEliminar.Enabled = true;
+        }
+
+        // MÉTODOS AUXILIARES (HELPERS)
+        private void LimpiarCampos()
+        {
+            txtNombre.Clear();
+            txtApellido.Clear();
+            txtDireccion.Clear();
+            txtTelefono.Clear();
+            txtEmail.Clear();
+            txtEdad.Clear();
+            txtCarnet.Clear();
+            txtDUI.Clear();
+            txtIdLector.Clear();
+
+            cbxTipo.SelectedIndex = -1;
+            cbxEstado.SelectedIndex = -1;
+            numLimitePrestamos.Value = 3; // Valor por defecto
+
+            btnEliminar.Enabled = false; // Deshabilitar hasta que se seleccione uno
+            txtNombre.Focus();
+        }
+
+        // INICIALIZACIÓN DE COMPONENTES (UI)
         private void InitializeComponent()
         {
             this.Text = "Gestión de Lectores";
@@ -299,6 +312,7 @@ namespace Biblioteca
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 45f));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 55f));
 
+            // GroupBox para el Listado
             gbListadoLectores = new GroupBox
             {
                 Text = "Listado de Lectores",
@@ -319,6 +333,7 @@ namespace Biblioteca
 
             gbListadoLectores.Controls.Add(dgvLectores);
 
+            // GroupBox para el Formulario de Detalles
             gbDetalleLector = new GroupBox
             {
                 Text = "Información del Lector",
@@ -338,12 +353,9 @@ namespace Biblioteca
             formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
             formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
 
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+            for (int i = 0; i < 6; i++)
+                formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+
 
             // Row 0: Nombre / Apellido
             formLayout.Controls.Add(new Label { Text = "Nombre:*", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 0);
@@ -401,6 +413,7 @@ namespace Biblioteca
             numLimitePrestamos = new NumericUpDown { Anchor = AnchorStyles.Left, Width = 140, Minimum = 1, Maximum = 10 };
             formLayout.Controls.Add(numLimitePrestamos, 3, 5);
 
+            // Panel de Botones
             btnPanel = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.RightToLeft,
@@ -418,6 +431,7 @@ namespace Biblioteca
             gbDetalleLector.Controls.Add(formLayout);
             gbDetalleLector.Controls.Add(btnPanel);
 
+            // Ensamblaje final
             mainLayout.Controls.Add(gbListadoLectores, 0, 0);
             mainLayout.Controls.Add(gbDetalleLector, 0, 1);
 

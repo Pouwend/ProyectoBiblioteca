@@ -1,225 +1,54 @@
+// IMPORTACIONES
 using Biblioteca;
 using BibliotecaDAE.Formularios;
 using Microsoft.Data.SqlClient;
-using Microsoft.Data.SqlClient;
-using SistemaControlPersonal.Core.Lib;
 using SistemaControlPersonal.Core.Lib;
 using System;
-using System;
-using System.Data;
 using System.Data;
 using System.Drawing;
-using System.Drawing;
 using System.Threading.Tasks;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Windows.Forms;
 
 namespace BibliotecaDAE.Formularios
 {
+    // DEFINICIÓN DE LA CLASE: frmPrestamos
     public partial class frmPrestamos : Form
     {
-        // Declaración de todos los controles
+        // DECLARACIÓN DE CONTROLES
         private DataGridView dgvPrestamo;
         private TextBox txtIdPrestamo, txtIdUsuario, txtIdLector, txtIdEjemplar;
         private TextBox txtNUsuario, txtNLector, txtNEjemplar;
         private DateTimePicker dtPrestamo, dtDevolucion, dtReal;
         private ComboBox cbEstado;
-        private Button btnNuevoPrestamo, btnLector, btnLibros, btnRenovar, btnGuardar, btnLimpiar;
+        private Button btnNuevoPrestamo, btnLector, btnLibros, btnRenovar, btnGuardar, btnLimpiar, btnEnviarReporte;
         private Label lblInfoRenovacion, lblDiasRestantes, lblEstadoRenovacion;
         private GroupBox gbListadoPrestamos, gbRenovaciones;
         private TableLayoutPanel mainLayout;
 
+        // CONSTRUCTOR E INICIALIZACIÓN
         public frmPrestamos()
         {
             InitializeComponent();
+            ConfigurarEventos();
 
+            // Limpiar campos y cargar datos iniciales
+            LimpiarCampos();
+            CargarDatosUsuarioLogueado();
+        }
+
+        private void ConfigurarEventos()
+        {
             // Cargar los prestamos cuando se abre el formulario
             this.Load += async (_, __) => await LoadPrestamosAsync();
 
-            // Configurar eventos
+            // Configurar evento de selección del DataGridView
             if (dgvPrestamo != null)
             {
                 dgvPrestamo.SelectionChanged += dgvPrestamo_SelectionChanged;
             }
-
-            // Limpiar campos al iniciar el formulario
-            LimpiarCampos();
-
-            // Cargar datos del usuario logueado
-            CargarDatosUsuarioLogueado();
         }
 
-        private void CargarDatosUsuarioLogueado()
-        {
-            // Cargar datos del usuario desde la sesión
-            if (SesionUsuario.IdUsuario > 0)
-            {
-                txtIdUsuario.Text = SesionUsuario.IdUsuario.ToString();
-                txtNUsuario.Text = SesionUsuario.Nombre;
-            }
-        }
-
-        private void dgvPrestamo_SelectionChanged(object sender, EventArgs e)
-        {
-            // Si no hay ninguna fila seleccionada, limpiar todos los campos
-            if (dgvPrestamo.SelectedRows.Count == 0)
-            {
-                LimpiarCampos();
-                return;
-            }
-
-            var row = dgvPrestamo.SelectedRows[0];
-
-            // Función auxiliar para obtener valores de las celdas de forma segura
-            string GetString(string colName)
-            {
-                try
-                {
-                    return row.Cells[colName].Value?.ToString() ?? string.Empty;
-                }
-                catch
-                {
-                    return string.Empty;
-                }
-            }
-
-            // Función auxiliar para obtener fechas de forma segura
-            DateTime? GetDateTime(string colName)
-            {
-                try
-                {
-                    var value = row.Cells[colName].Value;
-                    if (value != null && value != DBNull.Value && DateTime.TryParse(value.ToString(), out DateTime date))
-                        return date;
-                }
-                catch { }
-                return null;
-            }
-
-            // Rellenar los campos de texto con la información del préstamo
-            txtIdPrestamo.Text = GetString("IdPrestamo");
-            txtIdUsuario.Text = GetString("IdUsuario");
-            txtIdLector.Text = GetString("IdLector");
-            txtIdEjemplar.Text = GetString("IdEjemplar");
-            txtNUsuario.Text = GetString("NombreUsuario");
-            txtNLector.Text = GetString("NombreLector");
-            txtNEjemplar.Text = GetString("TituloLibro");
-
-            if (cbEstado != null)
-            {
-                var estado = GetString("EstadoPrestamo");
-                // Buscar el índice del estado en el ComboBox
-                int index = cbEstado.Items.IndexOf(estado);
-                cbEstado.SelectedIndex = index >= 0 ? index : -1;
-            }
-
-            var fechaPrestamo = GetDateTime("FechaPrestamo");
-            if (fechaPrestamo.HasValue && dtPrestamo != null)
-                dtPrestamo.Value = fechaPrestamo.Value;
-
-            var fechaDevolucion = GetDateTime("FechaDevolucionEstimada");
-            if (fechaDevolucion.HasValue && dtDevolucion != null)
-                dtDevolucion.Value = fechaDevolucion.Value;
-
-            var fechaReal = GetDateTime("FechaDevolucionReal");
-            if (fechaReal.HasValue && dtReal != null)
-                dtReal.Value = fechaReal.Value;
-            else if (dtReal != null)
-                dtReal.Value = DateTime.Now;
-
-            // Verificar si puede renovar
-            VerificarRenovacion(GetString("IdPrestamo"), GetString("EstadoPrestamo"), fechaDevolucion);
-        }
-
-        private async void VerificarRenovacion(string idPrestamoStr, string estado, DateTime? fechaDevolucion)
-        {
-            if (string.IsNullOrEmpty(idPrestamoStr) || !int.TryParse(idPrestamoStr, out int idPrestamo))
-            {
-                lblInfoRenovacion.Text = "Información de Renovación";
-                lblDiasRestantes.Text = "Días restantes: -";
-                lblEstadoRenovacion.Text = "Estado: -";
-                lblEstadoRenovacion.ForeColor = Color.Black;
-                btnRenovar.Enabled = false;
-                return;
-            }
-
-            Cnn cnn = null;
-            try
-            {
-                cnn = new Cnn();
-                var cn = cnn.OpenDb();
-
-                using var cmd = cn.CreateCommand();
-                cmd.CommandText = @"
-                    SELECT Renovado 
-                    FROM dbo.Prestamo 
-                    WHERE IdPrestamo = @idPrestamo";
-
-                cmd.Parameters.AddWithValue("@idPrestamo", idPrestamo);
-                var result = await cmd.ExecuteScalarAsync();
-
-                bool yaRenovado = result != null && result != DBNull.Value && Convert.ToBoolean(result);
-
-                // Calcular días restantes
-                int diasRestantes = 0;
-                if (fechaDevolucion.HasValue)
-                {
-                    diasRestantes = (fechaDevolucion.Value.Date - DateTime.Now.Date).Days;
-                }
-
-                lblDiasRestantes.Text = $"Días restantes: {diasRestantes}";
-
-                if (diasRestantes < 0)
-                {
-                    lblDiasRestantes.ForeColor = Color.Red;
-                }
-                else if (diasRestantes <= 3)
-                {
-                    lblDiasRestantes.ForeColor = Color.Orange;
-                }
-                else
-                {
-                    lblDiasRestantes.ForeColor = Color.Green;
-                }
-
-                // Verificar si puede renovar
-                bool puedeRenovar = estado == "Activo" && !yaRenovado && diasRestantes >= -7;
-
-                if (yaRenovado)
-                {
-                    lblEstadoRenovacion.Text = "Ya fue renovado";
-                    lblEstadoRenovacion.ForeColor = Color.Red;
-                }
-                else if (estado != "Activo")
-                {
-                    lblEstadoRenovacion.Text = $"Estado: {estado}";
-                    lblEstadoRenovacion.ForeColor = Color.Gray;
-                }
-                else if (puedeRenovar)
-                {
-                    lblEstadoRenovacion.Text = "Puede renovar";
-                    lblEstadoRenovacion.ForeColor = Color.Green;
-                }
-                else
-                {
-                    lblEstadoRenovacion.Text = "No puede renovar";
-                    lblEstadoRenovacion.ForeColor = Color.Red;
-                }
-
-                btnRenovar.Enabled = puedeRenovar;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error verificando renovación: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                if (cnn != null) cnn.CloseDB();
-            }
-        }
-
+        // LÓGICA DE DATOS (ACCESO A BD)
         private async Task LoadPrestamosAsync()
         {
             var dt = new DataTable();
@@ -229,10 +58,9 @@ namespace BibliotecaDAE.Formularios
             {
                 cnn = new Cnn();
                 var cn = cnn.OpenDb();
-
                 using var cmd = cn.CreateCommand();
 
-                // Query para obtener información completa del prestamo
+                // Query que une múltiples tablas para obtener información detallada del préstamo
                 cmd.CommandText = @"
                     SELECT 
                         p.IdPrestamo,
@@ -255,27 +83,405 @@ namespace BibliotecaDAE.Formularios
                     INNER JOIN dbo.Libros li ON e.IdLibro = li.IdLibros
                     ORDER BY p.IdPrestamo DESC";
 
-                // Ejecutar la consulta de forma asíncrona
                 using var reader = await cmd.ExecuteReaderAsync();
                 dt.Load(reader);
 
                 dgvPrestamo.DataSource = dt;
-
                 ConfigurarColumnasDataGridView();
             }
             catch (Exception ex)
             {
-                // Mostrar mensaje de error si algo falla
                 MessageBox.Show($"Error cargando Préstamos: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                if (cnn != null)
+                cnn?.CloseDB();
+            }
+        }
+
+        private async void VerificarRenovacion(string idPrestamoStr, string estado, DateTime? fechaDevolucion)
+        {
+            if (string.IsNullOrEmpty(idPrestamoStr) || !int.TryParse(idPrestamoStr, out int idPrestamo))
+            {
+                // Resetea los labels si no hay un ID válido
+                lblInfoRenovacion.Text = "Información de Renovación";
+                lblDiasRestantes.Text = "Días restantes: -";
+                lblEstadoRenovacion.Text = "Estado: -";
+                lblEstadoRenovacion.ForeColor = Color.Black;
+                btnRenovar.Enabled = false;
+                return;
+            }
+
+            Cnn cnn = null;
+            try
+            {
+                cnn = new Cnn();
+                var cn = cnn.OpenDb();
+
+                // Verificar si el préstamo ya fue renovado
+                using var cmd = cn.CreateCommand();
+                cmd.CommandText = "SELECT Renovado FROM dbo.Prestamo WHERE IdPrestamo = @idPrestamo";
+                cmd.Parameters.AddWithValue("@idPrestamo", idPrestamo);
+                var result = await cmd.ExecuteScalarAsync();
+                bool yaRenovado = result != null && result != DBNull.Value && Convert.ToBoolean(result);
+
+                // Calcular días restantes
+                int diasRestantes = 0;
+                if (fechaDevolucion.HasValue)
                 {
-                    cnn.CloseDB();
+                    diasRestantes = (fechaDevolucion.Value.Date - DateTime.Now.Date).Days;
+                }
+                lblDiasRestantes.Text = $"Días restantes: {diasRestantes}";
+
+                // Aplicar formato de color a los días restantes
+                if (diasRestantes < 0) lblDiasRestantes.ForeColor = Color.Red;
+                else if (diasRestantes <= 3) lblDiasRestantes.ForeColor = Color.Orange;
+                else lblDiasRestantes.ForeColor = Color.Green;
+
+                // Determinar si se puede renovar (Lógica de negocio)
+                bool puedeRenovar = estado == "Activo" && !yaRenovado && diasRestantes >= -7;
+
+                // Actualizar UI de estado de renovación
+                if (yaRenovado)
+                {
+                    lblEstadoRenovacion.Text = "Ya fue renovado";
+                    lblEstadoRenovacion.ForeColor = Color.Red;
+                }
+                else if (estado != "Activo")
+                {
+                    lblEstadoRenovacion.Text = $"Estado: {estado}";
+                    lblEstadoRenovacion.ForeColor = Color.Gray;
+                }
+                else if (puedeRenovar)
+                {
+                    lblEstadoRenovacion.Text = "Puede renovar";
+                    lblEstadoRenovacion.ForeColor = Color.Green;
+                }
+                else
+                {
+                    lblEstadoRenovacion.Text = "No puede renovar";
+                    lblEstadoRenovacion.ForeColor = Color.Red;
+                }
+
+                // Habilitar o deshabilitar el botón
+                btnRenovar.Enabled = puedeRenovar;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error verificando renovación: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                cnn?.CloseDB();
+            }
+        }
+
+        // MANEJADORES DE EVENTOS (BOTONES)
+        private async void btnRenovar_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtIdPrestamo.Text))
+            {
+                MessageBox.Show("Debe seleccionar un préstamo.", "Validación",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var confirmacion = MessageBox.Show(
+                "¿Está seguro de renovar este préstamo?\n\nSe extenderá por 7 días adicionales desde la fecha de devolución estimada.",
+                "Confirmar Renovación", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (confirmacion != DialogResult.Yes) return;
+
+            Cnn cnn = null;
+            try
+            {
+                cnn = new Cnn();
+                var cn = cnn.OpenDb();
+                using var cmd = cn.CreateCommand();
+
+                // Actualiza la fecha de devolución y marca como renovado
+                cmd.CommandText = @"
+                    UPDATE dbo.Prestamo 
+                    SET 
+                        FechaDevolucionEstimada = DATEADD(DAY, 7, FechaDevolucionEstimada),
+                        Renovado = 1
+                    WHERE IdPrestamo = @idPrestamo 
+                      AND EstadoPrestamo = 'Activo' 
+                      AND Renovado = 0";
+
+                cmd.Parameters.AddWithValue("@idPrestamo", Convert.ToInt32(txtIdPrestamo.Text));
+                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                if (rowsAffected > 0)
+                {
+                    MessageBox.Show("Préstamo renovado exitosamente.\nNueva fecha de devolución: " +
+                        dtDevolucion.Value.AddDays(7).ToString("dd/MM/yyyy"),
+                        "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    await LoadPrestamosAsync();
+                    LimpiarCampos();
+                }
+                else
+                {
+                    MessageBox.Show("No se pudo renovar el préstamo. Verifique que cumpla las condiciones.",
+                        "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al renovar: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                cnn?.CloseDB();
+            }
+        }
+
+        private async void btnGuardar_Click(object sender, EventArgs e)
+        {
+            // Validaciones
+            if (string.IsNullOrWhiteSpace(txtIdPrestamo.Text))
+            {
+                MessageBox.Show("Debe seleccionar un préstamo de la lista para modificar.",
+                    "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (cbEstado == null || cbEstado.SelectedIndex == -1)
+            {
+                MessageBox.Show("Debe seleccionar un estado para el préstamo.",
+                    "ValidACIÓN", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var estadoActual = cbEstado.SelectedItem.ToString();
+            var idEjemplar = Convert.ToInt32(txtIdEjemplar.Text);
+            Cnn cnn = null;
+
+            try
+            {
+                cnn = new Cnn();
+                var cn = cnn.OpenDb();
+
+                // Iniciar transacción
+                using var transaction = cn.BeginTransaction();
+                try
+                {
+                    // Actualizar el préstamo
+                    using (var cmdPrestamo = cn.CreateCommand())
+                    {
+                        cmdPrestamo.Transaction = transaction;
+                        cmdPrestamo.CommandText = @"
+                            UPDATE dbo.Prestamo 
+                            SET 
+                                EstadoPrestamo = @estado,
+                                FechaDevolucionReal = @fechaReal
+                            WHERE IdPrestamo = @idPrestamo";
+
+                        cmdPrestamo.Parameters.AddWithValue("@idPrestamo", Convert.ToInt32(txtIdPrestamo.Text));
+                        cmdPrestamo.Parameters.AddWithValue("@estado", estadoActual);
+                        cmdPrestamo.Parameters.AddWithValue("@fechaReal", dtReal.Value);
+                        await cmdPrestamo.ExecuteNonQueryAsync();
+                    }
+
+                    // Determinar el nuevo estado del ejemplar
+                    string nuevoEstadoEjemplar = estadoActual switch
+                    {
+                        "Devuelto" => "Disponible",
+                        "Activo" => "Prestado",
+                        "Vencido" => "Prestado",
+                        "Perdido" => "Perdido",
+                        _ => "Prestado"
+                    };
+
+                    // Actualizar el estado del ejemplar
+                    using (var cmdEjemplar = cn.CreateCommand())
+                    {
+                        cmdEjemplar.Transaction = transaction;
+                        cmdEjemplar.CommandText = @"
+                            UPDATE dbo.Ejemplares 
+                            SET EstadoEjemplar = @estado 
+                            WHERE IdEjemplar = @idEjemplar";
+
+                        cmdEjemplar.Parameters.AddWithValue("@estado", nuevoEstadoEjemplar);
+                        cmdEjemplar.Parameters.AddWithValue("@idEjemplar", idEjemplar);
+                        await cmdEjemplar.ExecuteNonQueryAsync();
+                    }
+
+                    // Confirmar la transacción
+                    transaction.Commit();
+
+                    MessageBox.Show("Préstamo actualizado correctamente.", "Éxito",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    await LoadPrestamosAsync();
+                    LimpiarCampos();
+                }
+                catch
+                {
+                    // Si algo falla, revertir
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al guardar: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                cnn?.CloseDB();
+            }
+        }
+
+        private async void btnPrestamo_Click_1(object sender, EventArgs e)
+        {
+            // Abre el formulario de detalles
+            using var detalle = new frmPrestamoDetalle();
+            detalle.ShowDialog(this);
+            // Recarga la lista de préstamos cuando se cierra
+            await LoadPrestamosAsync();
+        }
+
+        private async void btnLector_Click_1(object sender, EventArgs e)
+        {
+            using var lectorForm = new FrmLectores();
+            lectorForm.ShowDialog(this);
+            // Recarga los préstamos
+            await LoadPrestamosAsync();
+        }
+
+        private async void btnLibros_Click(object sender, EventArgs e)
+        {
+            using var librosForm = new frmLibros();
+            librosForm.ShowDialog(this);
+            await LoadPrestamosAsync();
+        }
+
+        private void btnEnviarReporte_Click(object sender, EventArgs e)
+        {
+            if (dgvPrestamo == null || dgvPrestamo.Rows.Count == 0)
+            {
+                MessageBox.Show("No hay datos de préstamos para reportar.", "Datos Vacíos",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            using var formReporte = new frmEnviarReporte(dgvPrestamo);
+            formReporte.ShowDialog(this);
+        }
+
+        private void btnLimpiar_Click(object sender, EventArgs e)
+        {
+            LimpiarCampos();
+        }
+
+        // MANEJADORES DE EVENTOS (UI)
+        private void dgvPrestamo_SelectionChanged(object sender, EventArgs e)
+        {
+            if (dgvPrestamo.SelectedRows.Count == 0)
+            {
+                LimpiarCampos();
+                return;
+            }
+
+            var row = dgvPrestamo.SelectedRows[0];
+
+            // Funciones locales para obtener valores de forma segura
+            string GetString(string colName)
+            {
+                try { return row.Cells[colName].Value?.ToString() ?? string.Empty; }
+                catch { return string.Empty; }
+            }
+
+            DateTime? GetDateTime(string colName)
+            {
+                try
+                {
+                    var value = row.Cells[colName].Value;
+                    if (value != null && value != DBNull.Value && DateTime.TryParse(value.ToString(), out DateTime date))
+                        return date;
+                }
+                catch { }
+                return null;
+            }
+
+            // Rellenar campos de texto
+            txtIdPrestamo.Text = GetString("IdPrestamo");
+            txtIdUsuario.Text = GetString("IdUsuario");
+            txtIdLector.Text = GetString("IdLector");
+            txtIdEjemplar.Text = GetString("IdEjemplar");
+            txtNUsuario.Text = GetString("NombreUsuario");
+            txtNLector.Text = GetString("NombreLector");
+            txtNEjemplar.Text = GetString("TituloLibro");
+
+            // Rellenar ComboBox de Estado
+            if (cbEstado != null)
+            {
+                var estado = GetString("EstadoPrestamo");
+                int index = cbEstado.Items.IndexOf(estado);
+                cbEstado.SelectedIndex = index >= 0 ? index : -1;
+            }
+
+            // Rellenar fechas
+            var fechaPrestamo = GetDateTime("FechaPrestamo");
+            if (fechaPrestamo.HasValue && dtPrestamo != null)
+                dtPrestamo.Value = fechaPrestamo.Value;
+
+            var fechaDevolucion = GetDateTime("FechaDevolucionEstimada");
+            if (fechaDevolucion.HasValue && dtDevolucion != null)
+                dtDevolucion.Value = fechaDevolucion.Value;
+
+            var fechaReal = GetDateTime("FechaDevolucionReal");
+            if (fechaReal.HasValue && dtReal != null)
+                dtReal.Value = fechaReal.Value;
+            else if (dtReal != null)
+                dtReal.Value = DateTime.Now;
+
+            // Verificar renovación
+            VerificarRenovacion(GetString("IdPrestamo"), GetString("EstadoPrestamo"), fechaDevolucion);
+        }
+
+        // Evento agregado del Código 1
+        private void cbEstado_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            // Lógica a implementar si el cambio de estado debe disparar una acción.
+        }
+
+        // MÉTODOS AUXILIARES (HELPERS)
+        private void CargarDatosUsuarioLogueado()
+        {
+            if (SesionUsuario.IdUsuario > 0)
+            {
+                txtIdUsuario.Text = SesionUsuario.IdUsuario.ToString();
+                txtNUsuario.Text = SesionUsuario.Nombre;
+            }
+        }
+
+        private void LimpiarCampos()
+        {
+            txtIdPrestamo.Clear();
+            txtIdLector.Clear();
+            txtIdEjemplar.Clear();
+            txtNLector.Clear();
+            txtNEjemplar.Clear();
+
+            if (cbEstado != null) cbEstado.SelectedIndex = -1;
+            if (dtPrestamo != null) dtPrestamo.Value = DateTime.Now;
+            if (dtDevolucion != null) dtDevolucion.Value = DateTime.Now;
+            if (dtReal != null) dtReal.Value = DateTime.Now;
+
+            // Resetear info de renovación
+            lblDiasRestantes.Text = "Días restantes: -";
+            lblDiasRestantes.ForeColor = Color.Black;
+            lblEstadoRenovacion.Text = "Estado: -";
+            lblEstadoRenovacion.ForeColor = Color.Black;
+            btnRenovar.Enabled = false;
+
+            // Mantener los datos del usuario logueado
+            CargarDatosUsuarioLogueado();
         }
 
         private void ConfigurarColumnasDataGridView()
@@ -314,240 +520,7 @@ namespace BibliotecaDAE.Formularios
                 dgvPrestamo.Columns["DiasRestantes"].HeaderText = "Días Rest.";
         }
 
-        private void LimpiarCampos()
-        {
-            txtIdPrestamo.Clear();
-            txtIdLector.Clear();
-            txtIdEjemplar.Clear();
-            txtNLector.Clear();
-            txtNEjemplar.Clear();
-
-            if (cbEstado != null)
-                cbEstado.SelectedIndex = -1;
-
-            if (dtPrestamo != null)
-                dtPrestamo.Value = DateTime.Now;
-
-            if (dtDevolucion != null)
-                dtDevolucion.Value = DateTime.Now;
-
-            if (dtReal != null)
-                dtReal.Value = DateTime.Now;
-
-            lblDiasRestantes.Text = "Días restantes: -";
-            lblEstadoRenovacion.Text = "Estado: -";
-            lblEstadoRenovacion.ForeColor = Color.Black;
-            btnRenovar.Enabled = false;
-
-            // Mantener los datos del usuario logueado
-            CargarDatosUsuarioLogueado();
-        }
-
-        private async void btnPrestamo_Click_1(object sender, EventArgs e)
-        {
-            using var detalle = new frmPrestamoDetalle();
-            detalle.ShowDialog(this);
-            await LoadPrestamosAsync();
-        }
-
-        private async void btnLector_Click_1(object sender, EventArgs e)
-        {
-            using var lectorForm = new FrmLectores();
-            lectorForm.ShowDialog(this);
-            await LoadPrestamosAsync();
-        }
-
-        private async void btnLibros_Click(object sender, EventArgs e)
-        {
-            using var librosForm = new frmLibros();
-            librosForm.ShowDialog(this);
-            await LoadPrestamosAsync();
-            await LoadPrestamosAsync();
-        }
-
-        private async void btnRenovar_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(txtIdPrestamo.Text))
-            {
-                MessageBox.Show("Debe seleccionar un préstamo.", "Validación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            var confirmacion = MessageBox.Show(
-                "¿Está seguro de renovar este préstamo?\n\nSe extenderá por 7 días adicionales desde la fecha de devolución estimada.",
-                "Confirmar Renovación",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
-            if (confirmacion != DialogResult.Yes) return;
-
-            Cnn cnn = null;
-
-            try
-            {
-                cnn = new Cnn();
-                var cn = cnn.OpenDb();
-
-                using var cmd = cn.CreateCommand();
-                cmd.CommandText = @"
-                    UPDATE dbo.Prestamo 
-                    SET 
-                        FechaDevolucionEstimada = DATEADD(DAY, 7, FechaDevolucionEstimada),
-                        Renovado = 1
-                    WHERE IdPrestamo = @idPrestamo 
-                      AND EstadoPrestamo = 'Activo' 
-                      AND Renovado = 0";
-
-                cmd.Parameters.AddWithValue("@idPrestamo", Convert.ToInt32(txtIdPrestamo.Text));
-
-                int rowsAffected = await cmd.ExecuteNonQueryAsync();
-
-                if (rowsAffected > 0)
-                {
-                    MessageBox.Show("Préstamo renovado exitosamente.\nNueva fecha de devolución: " +
-                        dtDevolucion.Value.AddDays(7).ToString("dd/MM/yyyy"),
-                        "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                    await LoadPrestamosAsync();
-                    LimpiarCampos();
-                }
-                else
-                {
-                    MessageBox.Show("No se pudo renovar el préstamo. Verifique que cumpla las condiciones.",
-                        "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error al renovar: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                if (cnn != null) cnn.CloseDB();
-            }
-        }
-
-        private async void btnGuardar_Click(object sender, EventArgs e)
-        {
-            // Validar que haya un préstamo seleccionado
-            if (string.IsNullOrWhiteSpace(txtIdPrestamo.Text))
-            {
-                MessageBox.Show("Debe seleccionar un préstamo de la lista para modificar.",
-                    "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            // Validar que haya un estado seleccionado
-            if (cbEstado == null || cbEstado.SelectedIndex == -1)
-            {
-                MessageBox.Show("Debe seleccionar un estado para el préstamo.",
-                    "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            var estadoActual = cbEstado.SelectedItem.ToString();
-            var idEjemplar = Convert.ToInt32(txtIdEjemplar.Text);
-
-            Cnn cnn = null;
-
-            try
-            {
-                cnn = new Cnn();
-                var cn = cnn.OpenDb();
-
-                using var transaction = cn.BeginTransaction();
-
-                try
-                {
-                    // 1. Actualizar el préstamo
-                    using (var cmdPrestamo = cn.CreateCommand())
-                    {
-                        cmdPrestamo.Transaction = transaction;
-                        cmdPrestamo.CommandText = @"
-                            UPDATE dbo.Prestamo 
-                            SET 
-                                EstadoPrestamo = @estado,
-                                FechaDevolucionReal = @fechaReal
-                            WHERE IdPrestamo = @idPrestamo";
-
-                        cmdPrestamo.Parameters.AddWithValue("@idPrestamo", Convert.ToInt32(txtIdPrestamo.Text));
-                        cmdPrestamo.Parameters.AddWithValue("@estado", estadoActual);
-                        cmdPrestamo.Parameters.AddWithValue("@fechaReal", dtReal.Value);
-
-                        await cmdPrestamo.ExecuteNonQueryAsync();
-                    }
-
-                    // 2. Actualizar estado del ejemplar según el estado del préstamo
-                    string nuevoEstadoEjemplar = estadoActual switch
-                    {
-                        "Devuelto" => "Disponible",
-                        "Activo" => "Prestado",
-                        "Vencido" => "Prestado",
-                        "Perdido" => "Perdido",
-                        _ => "Prestado"
-                    };
-
-                    using (var cmdEjemplar = cn.CreateCommand())
-                    {
-                        cmdEjemplar.Transaction = transaction;
-                        cmdEjemplar.CommandText = @"
-                            UPDATE dbo.Ejemplares 
-                            SET EstadoEjemplar = @estado 
-                            WHERE IdEjemplar = @idEjemplar";
-
-                        cmdEjemplar.Parameters.AddWithValue("@estado", nuevoEstadoEjemplar);
-                        cmdEjemplar.Parameters.AddWithValue("@idEjemplar", idEjemplar);
-
-                        await cmdEjemplar.ExecuteNonQueryAsync();
-                    }
-
-                    transaction.Commit();
-
-                    MessageBox.Show("Préstamo actualizado correctamente.", "Éxito",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                    await LoadPrestamosAsync();
-                    LimpiarCampos();
-                }
-                catch
-                {
-                    transaction.Rollback();
-                    throw;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error al guardar: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                if (cnn != null)
-                {
-                    cnn.CloseDB();
-                }
-            }
-        }
-
-        private void btnLimpiar_Click(object sender, EventArgs e)
-        {
-            LimpiarCampos();
-        }
-
-        private void cbEstado_SelectedIndexChanged(object sender, EventArgs e)
-        {
-        }
-
-        private void groupBox2_Enter(object sender, EventArgs e)
-        {
-        }
-
-        private void label9_Click(object sender, EventArgs e)
-        {
-        }
-
+        // INICIALIZACIÓN DE COMPONENTES
         private void InitializeComponent()
         {
             this.Text = "Gestión de Préstamos y Renovaciones";
@@ -565,7 +538,6 @@ namespace BibliotecaDAE.Formularios
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 60f));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 40f));
 
-            // ===== LISTADO DE PRÉSTAMOS =====
             gbListadoPrestamos = new GroupBox
             {
                 Text = "Listado de Préstamos",
@@ -603,13 +575,18 @@ namespace BibliotecaDAE.Formularios
             btnLibros = new Button { Text = "Gestionar Libros", Width = 130, Height = 28 };
             btnLibros.Click += btnLibros_Click;
 
-            btnPanelTop.Controls.AddRange(new Control[] { btnNuevoPrestamo, btnLector, btnLibros });
+            btnEnviarReporte = new Button { Text = "Enviar Reporte", Width = 130, Height = 28 };
+            btnEnviarReporte.Click += btnEnviarReporte_Click;
+    
+
+            // Panel de botones modificado
+            btnPanelTop.Controls.AddRange(new Control[] { btnNuevoPrestamo, btnLector, btnLibros, btnEnviarReporte });
+            // Fin de la modificación 
 
             panelListado.Controls.Add(dgvPrestamo);
             panelListado.Controls.Add(btnPanelTop);
             gbListadoPrestamos.Controls.Add(panelListado);
 
-            // ===== RENOVACIONES =====
             gbRenovaciones = new GroupBox
             {
                 Text = "Renovaciones y Actualización de Estado",
@@ -724,11 +701,11 @@ namespace BibliotecaDAE.Formularios
             this.Controls.Add(mainLayout);
         }
     }
-}
-namespace BibliotecaDAE
-{
-    public class frmPrestamos : Form
+
+    //CLASE FrmLectores
+    public class FrmLectores : Form
     {
+        //DECLARACIÓN DE CONTROLES
         private DataGridView dgvEjemplares;
         private TextBox txtNombre, txtApellido, txtDireccion, txtTelefono, txtEmail, txtEdad, txtCarnet, txtDUI, txtIdEjemplar;
         private ComboBox cbxTipo;
@@ -736,23 +713,27 @@ namespace BibliotecaDAE
         private TableLayoutPanel mainLayout;
         private GroupBox gbLector, gbEjemplares;
 
-        public frmPrestamos()
+        //CONSTRUCTOR E INICIALIZACIÓN
+        public FrmLectores()
         {
             InitializeComponent();
             RegisterEvents();
-            // Limpiar campos al iniciar el formulario
             LimpiarCampos();
         }
 
         private void RegisterEvents()
         {
+            // Carga los ejemplares disponibles al iniciar
             this.Load += async (_, __) => await LoadEjemplaresAsync();
             dgvEjemplares.SelectionChanged += DgvEjemplares_SelectionChanged;
+
+            // Eventos de botones
             btnGuardar.Click += async (_, __) => await GuardarLectorAsync();
             btnLimpiar.Click += (_, __) => LimpiarCampos();
             btnCerrar.Click += (_, __) => this.Close();
         }
 
+        // LÓGICA DE DATOS
         private async Task LoadEjemplaresAsync()
         {
             var dt = new DataTable();
@@ -762,18 +743,12 @@ namespace BibliotecaDAE
             {
                 cnn = new Cnn();
                 var cn = cnn.OpenDb();
-
                 using var cmd = cn.CreateCommand();
 
-                // Query con JOINs para mostrar información completa del libro
                 cmd.CommandText = @"
                     SELECT 
-                        e.IdEjemplar,
-                        e.IdLibro,
-                        e.CodigoEjemplar,
-                        e.EstadoEjemplar,
-                        e.FechaAdquisicion,
-                        lib.Titulo,
+                        e.IdEjemplar, e.IdLibro, e.CodigoEjemplar, e.EstadoEjemplar,
+                        e.FechaAdquisicion, lib.Titulo,
                         STRING_AGG(g.Nombre, ', ') AS Genero
                     FROM dbo.Ejemplares e
                     INNER JOIN dbo.Libros lib ON e.IdLibro = lib.IdLibros
@@ -785,45 +760,14 @@ namespace BibliotecaDAE
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 dt.Load(reader);
-
                 dgvEjemplares.DataSource = dt;
 
-                // Ajustar el orden y apariencia de las columnas
                 if (dgvEjemplares.Columns.Contains("IdEjemplar"))
-                {
-                    dgvEjemplares.Columns["IdEjemplar"].HeaderText = "ID Ejemplar";
                     dgvEjemplares.Columns["IdEjemplar"].Width = 90;
-                }
                 if (dgvEjemplares.Columns.Contains("IdLibro"))
-                {
-                    dgvEjemplares.Columns["IdLibro"].HeaderText = "ID Libro";
                     dgvEjemplares.Columns["IdLibro"].Width = 80;
-                }
-                if (dgvEjemplares.Columns.Contains("CodigoEjemplar"))
-                {
-                    dgvEjemplares.Columns["CodigoEjemplar"].HeaderText = "Código";
-                    dgvEjemplares.Columns["CodigoEjemplar"].Width = 100;
-                }
-                if (dgvEjemplares.Columns.Contains("EstadoEjemplar"))
-                {
-                    dgvEjemplares.Columns["EstadoEjemplar"].HeaderText = "Estado";
-                    dgvEjemplares.Columns["EstadoEjemplar"].Width = 100;
-                }
-                if (dgvEjemplares.Columns.Contains("FechaAdquisicion"))
-                {
-                    dgvEjemplares.Columns["FechaAdquisicion"].HeaderText = "Fecha Adquisición";
-                    dgvEjemplares.Columns["FechaAdquisicion"].Width = 130;
-                }
                 if (dgvEjemplares.Columns.Contains("Titulo"))
-                {
-                    dgvEjemplares.Columns["Titulo"].HeaderText = "Título del Libro";
                     dgvEjemplares.Columns["Titulo"].Width = 250;
-                }
-                if (dgvEjemplares.Columns.Contains("Genero"))
-                {
-                    dgvEjemplares.Columns["Genero"].HeaderText = "Género(s)";
-                    dgvEjemplares.Columns["Genero"].Width = 150;
-                }
             }
             catch (Exception ex)
             {
@@ -831,39 +775,18 @@ namespace BibliotecaDAE
             }
             finally
             {
-                if (cnn != null)
-                {
-                    cnn.CloseDB();
-                }
-            }
-        }
-
-        private void DgvEjemplares_SelectionChanged(object? sender, EventArgs e)
-        {
-            if (dgvEjemplares.SelectedRows.Count == 0) return;
-            var row = dgvEjemplares.SelectedRows[0];
-
-            // Obtener el IdEjemplar de la fila seleccionada
-            if (row.Cells["IdEjemplar"].Value != null && row.Cells["IdEjemplar"].Value != DBNull.Value)
-            {
-                txtIdEjemplar.Text = row.Cells["IdEjemplar"].Value.ToString();
-            }
-            else
-            {
-                txtIdEjemplar.Text = string.Empty;
+                cnn?.CloseDB();
             }
         }
 
         private async Task GuardarLectorAsync()
         {
-            // Validaciones básicas
+            // Validaciones
             if (string.IsNullOrWhiteSpace(txtNombre.Text) || string.IsNullOrWhiteSpace(txtApellido.Text))
             {
                 MessageBox.Show("Nombre y Apellido son obligatorios.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-
-            // Validación: TipoUsuario es obligatorio
             if (cbxTipo.SelectedIndex == -1)
             {
                 MessageBox.Show("Debe seleccionar un Tipo de Usuario.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -871,7 +794,6 @@ namespace BibliotecaDAE
                 return;
             }
 
-            // Validación: Al menos Carnet o DUI debe estar presente
             var carnet = string.IsNullOrWhiteSpace(txtCarnet.Text) ? null : txtCarnet.Text.Trim();
             var dui = string.IsNullOrWhiteSpace(txtDUI.Text) ? null : txtDUI.Text.Trim();
 
@@ -881,23 +803,22 @@ namespace BibliotecaDAE
                 return;
             }
 
+            // Preparar datos
             var nombre = txtNombre.Text.Trim();
             var apellido = txtApellido.Text.Trim();
             var direccion = string.IsNullOrWhiteSpace(txtDireccion.Text) ? null : txtDireccion.Text.Trim();
             var telefono = string.IsNullOrWhiteSpace(txtTelefono.Text) ? null : txtTelefono.Text.Trim();
             var email = string.IsNullOrWhiteSpace(txtEmail.Text) ? null : txtEmail.Text.Trim();
-            int? edad = null;
-            if (int.TryParse(txtEdad.Text, out var eVal)) edad = eVal;
+            int? edad = int.TryParse(txtEdad.Text, out var eVal) ? (int?)eVal : null;
             var tipo = cbxTipo.SelectedItem?.ToString();
 
             Cnn cnn = null;
-
             try
             {
                 cnn = new Cnn();
                 var cn = cnn.OpenDb();
 
-                // Verificar si ya existe un lector con ese DUI o Carnet
+                // Buscar lector existente
                 int? existingId = null;
                 if (!string.IsNullOrWhiteSpace(dui))
                 {
@@ -919,21 +840,16 @@ namespace BibliotecaDAE
 
                 if (existingId.HasValue)
                 {
-                    // Actualizar lector existente
+                    // UPDATE
                     using var cmdUpd = cn.CreateCommand();
                     cmdUpd.CommandText = @"
                         UPDATE dbo.Lector SET
-                            Nombre = @nombre,
-                            Apellido = @apellido,
-                            Direccion = @direccion,
-                            Telefono = @telefono,
-                            Email = @email,
-                            Edad = @edad,
-                            Carnet = @carnet,
-                            DUI = @dui,
-                            TipoUsuario = @tipo
+                            Nombre = @nombre, Apellido = @apellido, Direccion = @direccion,
+                            Telefono = @telefono, Email = @email, Edad = @edad,
+                            Carnet = @carnet, DUI = @dui, TipoUsuario = @tipo
                         WHERE IdLector = @id";
 
+                    cmdUpd.Parameters.AddWithValue("@id", existingId.Value);
                     cmdUpd.Parameters.Add(new SqlParameter("@nombre", SqlDbType.NVarChar, 50) { Value = nombre });
                     cmdUpd.Parameters.Add(new SqlParameter("@apellido", SqlDbType.NVarChar, 50) { Value = apellido });
                     cmdUpd.Parameters.Add(new SqlParameter("@direccion", SqlDbType.NVarChar, 200) { Value = (object?)direccion ?? DBNull.Value });
@@ -943,14 +859,13 @@ namespace BibliotecaDAE
                     cmdUpd.Parameters.Add(new SqlParameter("@carnet", SqlDbType.NVarChar, 20) { Value = (object?)carnet ?? DBNull.Value });
                     cmdUpd.Parameters.Add(new SqlParameter("@dui", SqlDbType.NVarChar, 10) { Value = (object?)dui ?? DBNull.Value });
                     cmdUpd.Parameters.Add(new SqlParameter("@tipo", SqlDbType.NVarChar, 20) { Value = tipo });
-                    cmdUpd.Parameters.AddWithValue("@id", existingId.Value);
 
                     var rows = await cmdUpd.ExecuteNonQueryAsync();
                     MessageBox.Show(rows > 0 ? "Lector actualizado correctamente." : "No se actualizó el lector.", "Resultado", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    // Insertar nuevo lector
+                    // INSERT
                     using var cmdIns = cn.CreateCommand();
                     cmdIns.CommandText = @"
                         INSERT INTO dbo.Lector
@@ -976,12 +891,11 @@ namespace BibliotecaDAE
             }
             catch (SqlException ex)
             {
-                // Manejo específico de errores de SQL
-                if (ex.Number == 2601 || ex.Number == 2627) // Violación de índice único
+                if (ex.Number == 2601 || ex.Number == 2627)
                 {
                     MessageBox.Show("Ya existe un lector registrado con ese Carnet o DUI.", "Error de duplicado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
-                else if (ex.Number == 547) // Violación de CHECK constraint
+                else if (ex.Number == 547)
                 {
                     MessageBox.Show("Los datos no cumplen con las restricciones de la base de datos. Verifique que al menos ingresó Carnet o DUI.", "Error de validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
@@ -996,13 +910,27 @@ namespace BibliotecaDAE
             }
             finally
             {
-                if (cnn != null)
-                {
-                    cnn.CloseDB();
-                }
+                cnn?.CloseDB();
             }
         }
 
+        // MANEJADORES DE EVENTOS (UI)
+        private void DgvEjemplares_SelectionChanged(object? sender, EventArgs e)
+        {
+            if (dgvEjemplares.SelectedRows.Count == 0) return;
+            var row = dgvEjemplares.SelectedRows[0];
+
+            if (row.Cells["IdEjemplar"].Value != null && row.Cells["IdEjemplar"].Value != DBNull.Value)
+            {
+                txtIdEjemplar.Text = row.Cells["IdEjemplar"].Value.ToString();
+            }
+            else
+            {
+                txtIdEjemplar.Text = string.Empty;
+            }
+        }
+
+        // MÉTODOS AUXILIARES (HELPERS)
         private void LimpiarCampos()
         {
             txtNombre.Clear();
@@ -1018,6 +946,7 @@ namespace BibliotecaDAE
             txtNombre.Focus();
         }
 
+        // INICIALIZACIÓN DE COMPONENTES
         private void InitializeComponent()
         {
             this.Text = "Detalle de Préstamo / Lector";
@@ -1053,7 +982,6 @@ namespace BibliotecaDAE
                 MultiSelect = false,
                 BackgroundColor = Color.White
             };
-
             gbEjemplares.Controls.Add(dgvEjemplares);
 
             // GroupBox para Lector
@@ -1076,11 +1004,8 @@ namespace BibliotecaDAE
             formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
             formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
 
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+            for (int i = 0; i < 5; i++)
+                formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
 
             // Row 0
             formLayout.Controls.Add(new Label { Text = "Nombre:*", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 0);

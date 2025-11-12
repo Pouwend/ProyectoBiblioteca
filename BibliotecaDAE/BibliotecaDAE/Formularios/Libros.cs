@@ -11,7 +11,7 @@ namespace BibliotecaDAE.Formularios
 {
     public partial class frmLibros : Form
     {
-        // ===== CONTROLES DE LIBROS =====
+        // DECLARACIÓN DE CONTROLES
         private DataGridView dgvLibros;
         private TextBox txtIdLibro, txtISBN, txtTitulo, txtEditorial, txtAnio;
         private CheckBox chkEstado;
@@ -21,7 +21,6 @@ namespace BibliotecaDAE.Formularios
         private GroupBox gbListadoLibros, gbDetalleLibro;
         private Label lblTotalLibros, lblLibrosActivos;
 
-        // ===== CONTROLES DE EJEMPLARES =====
         private DataGridView dgvEjemplares;
         private TextBox txtIdEjemplar, txtCodigoEjemplar, txtTituloLibro;
         private ComboBox cbLibroEjemplar, cbEstadoEjemplar;
@@ -30,10 +29,10 @@ namespace BibliotecaDAE.Formularios
         private GroupBox gbListadoEjemplares, gbDetalleEjemplar;
         private Label lblTotalEjemplares, lblDisponibles, lblPrestados, lblDanados;
 
-        // ===== CONTROLES GENERALES =====
         private TabControl tabControl;
         private Button btnCerrar;
 
+        // CONSTRUCTOR E INICIALIZACIÓN
         public frmLibros()
         {
             InitializeComponent();
@@ -44,6 +43,7 @@ namespace BibliotecaDAE.Formularios
 
         private void RegisterEvents()
         {
+            // Evento de carga inicial
             this.Load += async (_, __) =>
             {
                 await LoadLibrosAsync();
@@ -72,15 +72,14 @@ namespace BibliotecaDAE.Formularios
             // Evento al cambiar de pestaña
             tabControl.SelectedIndexChanged += async (_, __) =>
             {
-                if (tabControl.SelectedIndex == 0)
+                if (tabControl.SelectedIndex == 0) // Tab de Libros
                     await LoadLibrosAsync();
-                else if (tabControl.SelectedIndex == 1)
+                else if (tabControl.SelectedIndex == 1) // Tab de Ejemplares
                     await LoadEjemplaresAsync();
             };
         }
 
-        #region MÉTODOS DE LIBROS
-
+        // LÓGICA DE LIBROS
         private async Task CargarAutoresAsync()
         {
             Cnn cnn = null;
@@ -126,6 +125,7 @@ namespace BibliotecaDAE.Formularios
                 using var reader = await cmd.ExecuteReaderAsync();
                 clbGeneros.Items.Clear();
 
+                // Añadir objetos anónimos al CheckedListBox
                 while (await reader.ReadAsync())
                 {
                     var idGenero = reader.GetInt32(0);
@@ -160,12 +160,7 @@ namespace BibliotecaDAE.Formularios
                 using var cmd = cn.CreateCommand();
                 cmd.CommandText = @"
                     SELECT 
-                        l.IdLibros,
-                        l.ISBN,
-                        l.Titulo,
-                        l.Editorial,
-                        l.AnioPublicacion,
-                        l.Estado,
+                        l.IdLibros, l.ISBN, l.Titulo, l.Editorial, l.AnioPublicacion, l.Estado,
                         CASE WHEN l.Estado = 1 THEN 'Activo' ELSE 'Inactivo' END AS EstadoTexto,
                         a.Nombre + ' ' + a.Apellido AS Autor,
                         STRING_AGG(g.Nombre, ', ') AS Generos,
@@ -199,28 +194,17 @@ namespace BibliotecaDAE.Formularios
 
         private void ConfigurarColumnasLibros()
         {
-            if (dgvLibros.Columns.Contains("IdLibros"))
-                dgvLibros.Columns["IdLibros"].Visible = false;
-            if (dgvLibros.Columns.Contains("Estado"))
-                dgvLibros.Columns["Estado"].Visible = false;
-            if (dgvLibros.Columns.Contains("ISBN"))
-                dgvLibros.Columns["ISBN"].HeaderText = "ISBN";
-            if (dgvLibros.Columns.Contains("Titulo"))
-                dgvLibros.Columns["Titulo"].HeaderText = "Título";
-            if (dgvLibros.Columns.Contains("Editorial"))
-                dgvLibros.Columns["Editorial"].HeaderText = "Editorial";
-            if (dgvLibros.Columns.Contains("AnioPublicacion"))
-                dgvLibros.Columns["AnioPublicacion"].HeaderText = "Año";
-            if (dgvLibros.Columns.Contains("EstadoTexto"))
-                dgvLibros.Columns["EstadoTexto"].HeaderText = "Estado";
-            if (dgvLibros.Columns.Contains("Autor"))
-                dgvLibros.Columns["Autor"].HeaderText = "Autor";
-            if (dgvLibros.Columns.Contains("Generos"))
-                dgvLibros.Columns["Generos"].HeaderText = "Género(s)";
-            if (dgvLibros.Columns.Contains("TotalEjemplares"))
-                dgvLibros.Columns["TotalEjemplares"].HeaderText = "Total Ej.";
-            if (dgvLibros.Columns.Contains("EjemplaresDisponibles"))
-                dgvLibros.Columns["EjemplaresDisponibles"].HeaderText = "Disponibles";
+            if (dgvLibros.Columns.Contains("IdLibros")) dgvLibros.Columns["IdLibros"].Visible = false;
+            if (dgvLibros.Columns.Contains("Estado")) dgvLibros.Columns["Estado"].Visible = false;
+            if (dgvLibros.Columns.Contains("ISBN")) dgvLibros.Columns["ISBN"].HeaderText = "ISBN";
+            if (dgvLibros.Columns.Contains("Titulo")) dgvLibros.Columns["Titulo"].HeaderText = "Título";
+            if (dgvLibros.Columns.Contains("Editorial")) dgvLibros.Columns["Editorial"].HeaderText = "Editorial";
+            if (dgvLibros.Columns.Contains("AnioPublicacion")) dgvLibros.Columns["AnioPublicacion"].HeaderText = "Año";
+            if (dgvLibros.Columns.Contains("EstadoTexto")) dgvLibros.Columns["EstadoTexto"].HeaderText = "Estado";
+            if (dgvLibros.Columns.Contains("Autor")) dgvLibros.Columns["Autor"].HeaderText = "Autor";
+            if (dgvLibros.Columns.Contains("Generos")) dgvLibros.Columns["Generos"].HeaderText = "Género(s)";
+            if (dgvLibros.Columns.Contains("TotalEjemplares")) dgvLibros.Columns["TotalEjemplares"].HeaderText = "Total Ej.";
+            if (dgvLibros.Columns.Contains("EjemplaresDisponibles")) dgvLibros.Columns["EjemplaresDisponibles"].HeaderText = "Disponibles";
         }
 
         private void ActualizarEstadisticasLibros(DataTable dt)
@@ -241,7 +225,6 @@ namespace BibliotecaDAE.Formularios
             }
 
             var row = dgvLibros.SelectedRows[0];
-
             string GetString(string col) => row.Cells[col].Value?.ToString() ?? "";
 
             txtIdLibro.Text = GetString("IdLibros");
@@ -264,6 +247,7 @@ namespace BibliotecaDAE.Formularios
                 cnn = new Cnn();
                 var cn = cnn.OpenDb();
 
+                // Cargar Autor
                 using (var cmdAutor = cn.CreateCommand())
                 {
                     cmdAutor.CommandText = "SELECT IdAutor FROM dbo.AutorLibro WHERE IdLibro = @idLibro";
@@ -276,6 +260,7 @@ namespace BibliotecaDAE.Formularios
                     }
                 }
 
+                // Cargar Géneros
                 using (var cmdGeneros = cn.CreateCommand())
                 {
                     cmdGeneros.CommandText = "SELECT IdGenero FROM dbo.GeneroLibro WHERE IdLibro = @idLibro";
@@ -289,6 +274,7 @@ namespace BibliotecaDAE.Formularios
                         generosSeleccionados.Add(reader.GetInt32(0));
                     }
 
+                    // Marcar los géneros en el CheckedListBox
                     for (int i = 0; i < clbGeneros.Items.Count; i++)
                     {
                         dynamic item = clbGeneros.Items[i];
@@ -309,86 +295,73 @@ namespace BibliotecaDAE.Formularios
 
         private async Task GuardarLibroAsync()
         {
+            // Validaciones
             if (string.IsNullOrWhiteSpace(txtISBN.Text))
             {
-                MessageBox.Show("El ISBN es obligatorio.", "Validación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("El ISBN es obligatorio.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtISBN.Focus();
                 return;
             }
-
             if (string.IsNullOrWhiteSpace(txtTitulo.Text))
             {
-                MessageBox.Show("El título es obligatorio.", "Validación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("El título es obligatorio.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtTitulo.Focus();
                 return;
             }
-
             if (string.IsNullOrWhiteSpace(txtEditorial.Text))
             {
-                MessageBox.Show("La editorial es obligatoria.", "Validación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("La editorial es obligatoria.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtEditorial.Focus();
                 return;
             }
-
             if (!int.TryParse(txtAnio.Text, out int anio) || anio < 1000 || anio > DateTime.Now.Year)
             {
-                MessageBox.Show("El año de publicación es inválido.", "Validación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("El año de publicación es inválido.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtAnio.Focus();
                 return;
             }
-
             if (cbAutor.SelectedIndex == -1)
             {
-                MessageBox.Show("Debe seleccionar un autor.", "Validación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Debe seleccionar un autor.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 cbAutor.Focus();
                 return;
             }
-
             if (clbGeneros.CheckedItems.Count == 0)
             {
-                MessageBox.Show("Debe seleccionar al menos un género.", "Validación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Debe seleccionar al menos un género.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
+            // Recolección de datos
             var isbn = txtISBN.Text.Trim();
             var titulo = txtTitulo.Text.Trim();
             var editorial = txtEditorial.Text.Trim();
             var estado = chkEstado.Checked;
             int idAutor = Convert.ToInt32(cbAutor.SelectedValue);
-
             int? idLibro = int.TryParse(txtIdLibro.Text, out var id) ? id : (int?)null;
 
             Cnn cnn = null;
-
             try
             {
                 cnn = new Cnn();
                 var cn = cnn.OpenDb();
-
                 using var transaction = cn.BeginTransaction();
 
                 try
                 {
                     int libroId;
 
+                    // 1. Guardar o Actualizar el Libro
                     if (idLibro.HasValue)
                     {
+                        // UPDATE
                         using (var cmd = cn.CreateCommand())
                         {
                             cmd.Transaction = transaction;
                             cmd.CommandText = @"
                                 UPDATE dbo.Libros SET
-                                    ISBN = @isbn,
-                                    Titulo = @titulo,
-                                    Editorial = @editorial,
-                                    AnioPublicacion = @anio,
-                                    Estado = @estado
+                                    ISBN = @isbn, Titulo = @titulo, Editorial = @editorial,
+                                    AnioPublicacion = @anio, Estado = @estado
                                 WHERE IdLibros = @id";
 
                             cmd.Parameters.AddWithValue("@id", idLibro.Value);
@@ -397,12 +370,11 @@ namespace BibliotecaDAE.Formularios
                             cmd.Parameters.AddWithValue("@editorial", editorial);
                             cmd.Parameters.AddWithValue("@anio", anio);
                             cmd.Parameters.AddWithValue("@estado", estado);
-
                             await cmd.ExecuteNonQueryAsync();
                         }
-
                         libroId = idLibro.Value;
 
+                        // Limpiar relaciones antiguas
                         using (var cmdDel = cn.CreateCommand())
                         {
                             cmdDel.Transaction = transaction;
@@ -413,6 +385,7 @@ namespace BibliotecaDAE.Formularios
                     }
                     else
                     {
+                        // INSERT
                         using (var cmd = cn.CreateCommand())
                         {
                             cmd.Transaction = transaction;
@@ -426,11 +399,11 @@ namespace BibliotecaDAE.Formularios
                             cmd.Parameters.AddWithValue("@editorial", editorial);
                             cmd.Parameters.AddWithValue("@anio", anio);
                             cmd.Parameters.AddWithValue("@estado", estado);
-
                             libroId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
                         }
                     }
 
+                    // Insertar nueva relación de Autor
                     using (var cmdAutor = cn.CreateCommand())
                     {
                         cmdAutor.Transaction = transaction;
@@ -440,6 +413,7 @@ namespace BibliotecaDAE.Formularios
                         await cmdAutor.ExecuteNonQueryAsync();
                     }
 
+                    // Insertar nuevas relaciones de Género
                     foreach (dynamic item in clbGeneros.CheckedItems)
                     {
                         using var cmdGenero = cn.CreateCommand();
@@ -456,18 +430,18 @@ namespace BibliotecaDAE.Formularios
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                     await LoadLibrosAsync();
-                    await CargarLibrosParaEjemplaresAsync(); // Actualizar combo de ejemplares
+                    await CargarLibrosParaEjemplaresAsync(); 
                     LimpiarCamposLibros();
                 }
                 catch
                 {
-                    transaction.Rollback();
+                    transaction.Rollback(); // Revertir si algo falla
                     throw;
                 }
             }
             catch (SqlException ex)
             {
-                if (ex.Number == 2601 || ex.Number == 2627)
+                if (ex.Number == 2601 || ex.Number == 2627) // Clave única duplicada
                     MessageBox.Show("Ya existe un libro con ese ISBN.", "Error de duplicado",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 else
@@ -504,12 +478,12 @@ namespace BibliotecaDAE.Formularios
             if (confirmacion != DialogResult.Yes) return;
 
             Cnn cnn = null;
-
             try
             {
                 cnn = new Cnn();
                 var cn = cnn.OpenDb();
 
+                // se encarga de Ejemplares, AutorLibro y GeneroLibro.
                 using var cmd = cn.CreateCommand();
                 cmd.CommandText = "DELETE FROM dbo.Libros WHERE IdLibros = @id";
                 cmd.Parameters.AddWithValue("@id", Convert.ToInt32(txtIdLibro.Text));
@@ -525,7 +499,7 @@ namespace BibliotecaDAE.Formularios
             }
             catch (SqlException ex)
             {
-                if (ex.Number == 547)
+                if (ex.Number == 547) // Conflicto de Foreign Key (si no hay borrado en cascada)
                     MessageBox.Show("No se puede eliminar este libro porque tiene ejemplares asociados.",
                         "Error de integridad", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 else
@@ -553,6 +527,7 @@ namespace BibliotecaDAE.Formularios
             chkEstado.Checked = true;
             cbAutor.SelectedIndex = -1;
 
+            // Desmarcar todos los géneros
             for (int i = 0; i < clbGeneros.Items.Count; i++)
             {
                 clbGeneros.SetItemChecked(i, false);
@@ -562,10 +537,7 @@ namespace BibliotecaDAE.Formularios
             txtISBN.Focus();
         }
 
-        #endregion
-
-        #region MÉTODOS DE EJEMPLARES
-
+        // LÓGICA DE EJEMPLARES
         private async Task CargarLibrosParaEjemplaresAsync()
         {
             Cnn cnn = null;
@@ -603,10 +575,11 @@ namespace BibliotecaDAE.Formularios
 
         private void CbLibroEjemplar_SelectedIndexChanged(object? sender, EventArgs e)
         {
+            // Actualiza el TextBox de título
             if (cbLibroEjemplar.SelectedIndex != -1)
             {
                 var tituloCompleto = cbLibroEjemplar.Text;
-                var inicio = tituloCompleto.IndexOf(" (");
+                var inicio = tituloCompleto.IndexOf(" ("); // Encontrar el paréntesis del ISBN
                 txtTituloLibro.Text = inicio > 0 ? tituloCompleto.Substring(0, inicio) : tituloCompleto;
             }
             else
@@ -628,13 +601,8 @@ namespace BibliotecaDAE.Formularios
                 using var cmd = cn.CreateCommand();
                 cmd.CommandText = @"
                     SELECT 
-                        e.IdEjemplar,
-                        e.IdLibro,
-                        l.Titulo AS TituloLibro,
-                        l.ISBN,
-                        e.CodigoEjemplar,
-                        e.EstadoEjemplar,
-                        e.FechaAdquisicion,
+                        e.IdEjemplar, e.IdLibro, l.Titulo AS TituloLibro, l.ISBN,
+                        e.CodigoEjemplar, e.EstadoEjemplar, e.FechaAdquisicion,
                         CASE 
                             WHEN e.EstadoEjemplar = 'Prestado' THEN 
                                 (SELECT TOP 1 'Préstamo #' + CAST(p.IdPrestamo AS VARCHAR) + ' - ' + 
@@ -670,25 +638,18 @@ namespace BibliotecaDAE.Formularios
 
         private void ConfigurarColumnasEjemplares()
         {
-            if (dgvEjemplares.Columns.Contains("IdEjemplar"))
-                dgvEjemplares.Columns["IdEjemplar"].HeaderText = "ID";
-            if (dgvEjemplares.Columns.Contains("IdLibro"))
-                dgvEjemplares.Columns["IdLibro"].Visible = false;
-            if (dgvEjemplares.Columns.Contains("TituloLibro"))
-                dgvEjemplares.Columns["TituloLibro"].HeaderText = "Libro";
-            if (dgvEjemplares.Columns.Contains("ISBN"))
-                dgvEjemplares.Columns["ISBN"].HeaderText = "ISBN";
-            if (dgvEjemplares.Columns.Contains("CodigoEjemplar"))
-                dgvEjemplares.Columns["CodigoEjemplar"].HeaderText = "Código Ejemplar";
-            if (dgvEjemplares.Columns.Contains("EstadoEjemplar"))
-                dgvEjemplares.Columns["EstadoEjemplar"].HeaderText = "Estado";
+            if (dgvEjemplares.Columns.Contains("IdEjemplar")) dgvEjemplares.Columns["IdEjemplar"].HeaderText = "ID";
+            if (dgvEjemplares.Columns.Contains("IdLibro")) dgvEjemplares.Columns["IdLibro"].Visible = false;
+            if (dgvEjemplares.Columns.Contains("TituloLibro")) dgvEjemplares.Columns["TituloLibro"].HeaderText = "Libro";
+            if (dgvEjemplares.Columns.Contains("ISBN")) dgvEjemplares.Columns["ISBN"].HeaderText = "ISBN";
+            if (dgvEjemplares.Columns.Contains("CodigoEjemplar")) dgvEjemplares.Columns["CodigoEjemplar"].HeaderText = "Código Ejemplar";
+            if (dgvEjemplares.Columns.Contains("EstadoEjemplar")) dgvEjemplares.Columns["EstadoEjemplar"].HeaderText = "Estado";
             if (dgvEjemplares.Columns.Contains("FechaAdquisicion"))
             {
                 dgvEjemplares.Columns["FechaAdquisicion"].HeaderText = "Fecha Adquisición";
                 dgvEjemplares.Columns["FechaAdquisicion"].DefaultCellStyle.Format = "dd/MM/yyyy";
             }
-            if (dgvEjemplares.Columns.Contains("InfoPrestamo"))
-                dgvEjemplares.Columns["InfoPrestamo"].HeaderText = "Info Préstamo";
+            if (dgvEjemplares.Columns.Contains("InfoPrestamo")) dgvEjemplares.Columns["InfoPrestamo"].HeaderText = "Info Préstamo";
         }
 
         private void ActualizarEstadisticasEjemplares(DataTable dt)
@@ -701,16 +662,10 @@ namespace BibliotecaDAE.Formularios
                 string estado = row["EstadoEjemplar"].ToString();
                 switch (estado)
                 {
-                    case "Disponible":
-                        disponibles++;
-                        break;
-                    case "Prestado":
-                        prestados++;
-                        break;
+                    case "Disponible": disponibles++; break;
+                    case "Prestado": prestados++; break;
                     case "Dañado":
-                    case "Perdido":
-                        danados++;
-                        break;
+                    case "Perdido": danados++; break;
                 }
             }
 
@@ -732,22 +687,20 @@ namespace BibliotecaDAE.Formularios
             }
 
             var row = dgvEjemplares.SelectedRows[0];
-
             string GetString(string col) => row.Cells[col].Value?.ToString() ?? "";
 
             txtIdEjemplar.Text = GetString("IdEjemplar");
             txtCodigoEjemplar.Text = GetString("CodigoEjemplar");
             txtTituloLibro.Text = GetString("TituloLibro");
-
             cbLibroEjemplar.SelectedValue = row.Cells["IdLibro"].Value;
             cbEstadoEjemplar.SelectedItem = GetString("EstadoEjemplar");
 
             if (DateTime.TryParse(GetString("FechaAdquisicion"), out DateTime fecha))
                 dtpFechaAdquisicion.Value = fecha;
 
+            // No permitir eliminar ejemplares prestados
             string estadoActual = GetString("EstadoEjemplar");
             btnEliminarEjemplar.Enabled = estadoActual != "Prestado";
-
             if (estadoActual == "Prestado")
             {
                 btnEliminarEjemplar.Text = "No eliminable";
@@ -762,60 +715,53 @@ namespace BibliotecaDAE.Formularios
 
         private async Task GuardarEjemplarAsync()
         {
+            // Validaciones
             if (cbLibroEjemplar.SelectedIndex == -1)
             {
-                MessageBox.Show("Debe seleccionar un libro.", "Validación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Debe seleccionar un libro.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 cbLibroEjemplar.Focus();
                 return;
             }
-
             if (string.IsNullOrWhiteSpace(txtCodigoEjemplar.Text))
             {
-                MessageBox.Show("El código del ejemplar es obligatorio.", "Validación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("El código del ejemplar es obligatorio.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtCodigoEjemplar.Focus();
                 return;
             }
-
             if (cbEstadoEjemplar.SelectedIndex == -1)
             {
-                MessageBox.Show("Debe seleccionar un estado.", "Validación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Debe seleccionar un estado.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 cbEstadoEjemplar.Focus();
                 return;
             }
 
+            // Recolección de datos
             int idLibro = Convert.ToInt32(cbLibroEjemplar.SelectedValue);
             string codigo = txtCodigoEjemplar.Text.Trim();
             string estado = cbEstadoEjemplar.SelectedItem.ToString();
             DateTime fechaAdquisicion = dtpFechaAdquisicion.Value;
-
             int? idEjemplar = int.TryParse(txtIdEjemplar.Text, out var id) ? id : (int?)null;
 
             Cnn cnn = null;
-
             try
             {
                 cnn = new Cnn();
                 var cn = cnn.OpenDb();
-
                 using var cmd = cn.CreateCommand();
 
                 if (idEjemplar.HasValue)
                 {
+                    // UPDATE
                     cmd.CommandText = @"
                         UPDATE dbo.Ejemplares SET
-                            IdLibro = @idLibro,
-                            CodigoEjemplar = @codigo,
-                            EstadoEjemplar = @estado,
-                            FechaAdquisicion = @fecha
+                            IdLibro = @idLibro, CodigoEjemplar = @codigo,
+                            EstadoEjemplar = @estado, FechaAdquisicion = @fecha
                         WHERE IdEjemplar = @id";
-
                     cmd.Parameters.AddWithValue("@id", idEjemplar.Value);
                 }
                 else
                 {
+                    // INSERT
                     cmd.CommandText = @"
                         INSERT INTO dbo.Ejemplares (IdLibro, CodigoEjemplar, EstadoEjemplar, FechaAdquisicion)
                         VALUES (@idLibro, @codigo, @estado, @fecha)";
@@ -832,12 +778,12 @@ namespace BibliotecaDAE.Formularios
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 await LoadEjemplaresAsync();
-                await LoadLibrosAsync(); // Actualizar contadores de ejemplares en libros
+                await LoadLibrosAsync(); // Actualizar contadores en la otra pestaña
                 LimpiarCamposEjemplares();
             }
             catch (SqlException ex)
             {
-                if (ex.Number == 2601 || ex.Number == 2627)
+                if (ex.Number == 2601 || ex.Number == 2627) // Clave única duplicada
                     MessageBox.Show("Ya existe un ejemplar con ese código.", "Error de duplicado",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 else
@@ -874,7 +820,6 @@ namespace BibliotecaDAE.Formularios
             if (confirmacion != DialogResult.Yes) return;
 
             Cnn cnn = null;
-
             try
             {
                 cnn = new Cnn();
@@ -890,12 +835,12 @@ namespace BibliotecaDAE.Formularios
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 await LoadEjemplaresAsync();
-                await LoadLibrosAsync();
+                await LoadLibrosAsync(); // Actualizar contadores
                 LimpiarCamposEjemplares();
             }
             catch (SqlException ex)
             {
-                if (ex.Number == 547)
+                if (ex.Number == 547) // Conflicto de Foreign Key (Préstamos)
                     MessageBox.Show("No se puede eliminar este ejemplar porque tiene préstamos asociados.",
                         "Error de integridad", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 else
@@ -928,8 +873,8 @@ namespace BibliotecaDAE.Formularios
             cbLibroEjemplar.Focus();
         }
 
-        #endregion
 
+        // INICIALIZACIÓN DE COMPONENTES 
         private void InitializeComponent()
         {
             this.Text = "Gestión de Libros y Ejemplares";
@@ -937,14 +882,11 @@ namespace BibliotecaDAE.Formularios
             this.StartPosition = FormStartPosition.CenterParent;
             this.Font = new Font("Segoe UI", 9f);
 
-            // ===== TAB CONTROL PRINCIPAL =====
             tabControl = new TabControl
             {
                 Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 9.5f)
             };
-
-            // ===== TAB 1: LIBROS =====
             var tabLibros = new TabPage("Catálogo de Libros");
 
             var mainLayoutLibros = new TableLayoutPanel
@@ -1069,7 +1011,6 @@ namespace BibliotecaDAE.Formularios
 
             tabLibros.Controls.Add(mainLayoutLibros);
 
-            // ===== TAB 2: EJEMPLARES =====
             var tabEjemplares = new TabPage("Inventario de Ejemplares");
 
             var mainLayoutEjemplares = new TableLayoutPanel
@@ -1189,11 +1130,9 @@ namespace BibliotecaDAE.Formularios
 
             tabEjemplares.Controls.Add(mainLayoutEjemplares);
 
-            // ===== AGREGAR TABS AL CONTROL =====
             tabControl.TabPages.Add(tabLibros);
             tabControl.TabPages.Add(tabEjemplares);
 
-            // ===== PANEL INFERIOR CON BOTÓN CERRAR =====
             var panelInferior = new FlowLayoutPanel
             {
                 Dock = DockStyle.Bottom,
