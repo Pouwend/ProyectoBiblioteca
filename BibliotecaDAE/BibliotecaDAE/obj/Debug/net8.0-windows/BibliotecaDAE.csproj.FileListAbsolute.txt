@@ -261,5 +261,5 @@ C:\Users\julia\Desktop\Proyecto\ProyectoBiblioteca\BibliotecaDAE\BibliotecaDAE\o
 C:\Users\julia\Desktop\Proyecto\ProyectoBiblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\BibliotecaDAE.genruntimeconfig.cache
 C:\Users\julia\Desktop\Proyecto\ProyectoBiblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\ref\BibliotecaDAE.dll
 C:\Users\julia\Desktop\Proyecto\ProyectoBiblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\Biblioteca.FrmLectores.resources
-C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\Biblioteca.FrmLectores.resources
 C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\BibliotecaDAE.frmPrestamoDetalle.resources
+C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\Biblioteca.FrmLectores.resources

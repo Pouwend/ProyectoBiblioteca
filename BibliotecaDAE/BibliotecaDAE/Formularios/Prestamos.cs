@@ -1,18 +1,18 @@
+using Biblioteca;
+using BibliotecaDAE.Formularios;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient;
+using SistemaControlPersonal.Core.Lib;
+using SistemaControlPersonal.Core.Lib;
+using System;
 using System;
 using System.Data;
+using System.Data;
 using System.Drawing;
+using System.Drawing;
+using System.Threading.Tasks;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Microsoft.Data.SqlClient;
-using SistemaControlPersonal.Core.Lib;
-using BibliotecaDAE.Formularios;
-using Biblioteca;
-using Microsoft.Data.SqlClient;
-using SistemaControlPersonal.Core.Lib;
-using System;
-using System.Data;
-using System.Drawing;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace BibliotecaDAE.Formularios
@@ -1124,6 +1124,7 @@ namespace BibliotecaDAE
                 Height = 40,
                 Padding = new Padding(0, 6, 0, 0)
             };
+           
             btnGuardar = new Button { Text = "Guardar Lector", Width = 120, Height = 28 };
             btnLimpiar = new Button { Text = "Limpiar", Width = 100, Height = 28 };
             btnCerrar = new Button { Text = "Cerrar", Width = 100, Height = 28 };
