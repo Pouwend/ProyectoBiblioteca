@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <Compile Update="Formularios\Lectores.cs" />
+    <Compile Update="Formularios\Libros.cs" />
     <Compile Update="Formularios\Prestamos.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -25,7 +25,7 @@ namespace BibliotecaDAE.Formularios
         private TextBox txtNUsuario, txtNLector, txtNEjemplar;
         private DateTimePicker dtPrestamo, dtDevolucion, dtReal;
         private ComboBox cbEstado;
-        private Button btnNuevoPrestamo, btnLector, btnRenovar, btnGuardar, btnLimpiar;
+        private Button btnNuevoPrestamo, btnLector, btnLibros, btnRenovar, btnGuardar, btnLimpiar;
         private Label lblInfoRenovacion, lblDiasRestantes, lblEstadoRenovacion;
         private GroupBox gbListadoPrestamos, gbRenovaciones;
         private TableLayoutPanel mainLayout;
@@ -357,6 +357,13 @@ namespace BibliotecaDAE.Formularios
             await LoadPrestamosAsync();
         }
 
+        private async void btnLibros_Click(object sender, EventArgs e)
+        {
+            using var librosForm = new frmLibros();
+            librosForm.ShowDialog(this);
+            await LoadPrestamosAsync();
+        }
+
         private async void btnRenovar_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtIdPrestamo.Text))
@@ -589,10 +596,13 @@ namespace BibliotecaDAE.Formularios
             btnNuevoPrestamo = new Button { Text = "Nuevo Préstamo", Width = 130, Height = 28 };
             btnNuevoPrestamo.Click += btnPrestamo_Click_1;
 
-            btnLector = new Button { Text = "Gestionar Lectores", Width = 130, Height = 28 };
+            btnLector = new Button { Text = "Gestionar Lectores", Width = 140, Height = 28 };
             btnLector.Click += btnLector_Click_1;
 
-            btnPanelTop.Controls.AddRange(new Control[] { btnNuevoPrestamo, btnLector });
+            btnLibros = new Button { Text = "Gestionar Libros", Width = 130, Height = 28 };
+            btnLibros.Click += btnLibros_Click;
+
+            btnPanelTop.Controls.AddRange(new Control[] { btnNuevoPrestamo, btnLector, btnLibros });
 
             panelListado.Controls.Add(dgvPrestamo);
             panelListado.Controls.Add(btnPanelTop);
@@ -1124,7 +1134,7 @@ namespace BibliotecaDAE
                 Height = 40,
                 Padding = new Padding(0, 6, 0, 0)
             };
-           
+
             btnGuardar = new Button { Text = "Guardar Lector", Width = 120, Height = 28 };
             btnLimpiar = new Button { Text = "Limpiar", Width = 100, Height = 28 };
             btnCerrar = new Button { Text = "Cerrar", Width = 100, Height = 28 };
