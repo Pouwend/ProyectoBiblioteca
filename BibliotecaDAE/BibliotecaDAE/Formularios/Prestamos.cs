@@ -362,6 +362,7 @@ namespace BibliotecaDAE.Formularios
             using var librosForm = new frmLibros();
             librosForm.ShowDialog(this);
             await LoadPrestamosAsync();
+            await LoadPrestamosAsync();
         }
 
         private async void btnRenovar_Click(object sender, EventArgs e)

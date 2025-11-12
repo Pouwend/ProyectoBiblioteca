@@ -11,21 +11,35 @@ namespace BibliotecaDAE.Formularios
 {
     public partial class frmLibros : Form
     {
+        // ===== CONTROLES DE LIBROS =====
         private DataGridView dgvLibros;
         private TextBox txtIdLibro, txtISBN, txtTitulo, txtEditorial, txtAnio;
         private CheckBox chkEstado;
         private ComboBox cbAutor;
         private CheckedListBox clbGeneros;
-        private Button btnGuardar, btnEliminar, btnLimpiar, btnCerrar;
+        private Button btnGuardarLibro, btnEliminarLibro, btnLimpiarLibro;
         private GroupBox gbListadoLibros, gbDetalleLibro;
-        private TableLayoutPanel mainLayout;
         private Label lblTotalLibros, lblLibrosActivos;
+
+        // ===== CONTROLES DE EJEMPLARES =====
+        private DataGridView dgvEjemplares;
+        private TextBox txtIdEjemplar, txtCodigoEjemplar, txtTituloLibro;
+        private ComboBox cbLibroEjemplar, cbEstadoEjemplar;
+        private DateTimePicker dtpFechaAdquisicion;
+        private Button btnGuardarEjemplar, btnEliminarEjemplar, btnLimpiarEjemplar;
+        private GroupBox gbListadoEjemplares, gbDetalleEjemplar;
+        private Label lblTotalEjemplares, lblDisponibles, lblPrestados, lblDanados;
+
+        // ===== CONTROLES GENERALES =====
+        private TabControl tabControl;
+        private Button btnCerrar;
 
         public frmLibros()
         {
             InitializeComponent();
             RegisterEvents();
-            LimpiarCampos();
+            LimpiarCamposLibros();
+            LimpiarCamposEjemplares();
         }
 
         private void RegisterEvents()
@@ -35,14 +49,37 @@ namespace BibliotecaDAE.Formularios
                 await LoadLibrosAsync();
                 await CargarAutoresAsync();
                 await CargarGenerosAsync();
+                await LoadEjemplaresAsync();
+                await CargarLibrosParaEjemplaresAsync();
             };
 
+            // Eventos de Libros
             dgvLibros.SelectionChanged += DgvLibros_SelectionChanged;
-            btnGuardar.Click += async (_, __) => await GuardarLibroAsync();
-            btnEliminar.Click += async (_, __) => await EliminarLibroAsync();
-            btnLimpiar.Click += (_, __) => LimpiarCampos();
+            btnGuardarLibro.Click += async (_, __) => await GuardarLibroAsync();
+            btnEliminarLibro.Click += async (_, __) => await EliminarLibroAsync();
+            btnLimpiarLibro.Click += (_, __) => LimpiarCamposLibros();
+
+            // Eventos de Ejemplares
+            dgvEjemplares.SelectionChanged += DgvEjemplares_SelectionChanged;
+            cbLibroEjemplar.SelectedIndexChanged += CbLibroEjemplar_SelectedIndexChanged;
+            btnGuardarEjemplar.Click += async (_, __) => await GuardarEjemplarAsync();
+            btnEliminarEjemplar.Click += async (_, __) => await EliminarEjemplarAsync();
+            btnLimpiarEjemplar.Click += (_, __) => LimpiarCamposEjemplares();
+
+            // Evento general
             btnCerrar.Click += (_, __) => this.Close();
+
+            // Evento al cambiar de pestaña
+            tabControl.SelectedIndexChanged += async (_, __) =>
+            {
+                if (tabControl.SelectedIndex == 0)
+                    await LoadLibrosAsync();
+                else if (tabControl.SelectedIndex == 1)
+                    await LoadEjemplaresAsync();
+            };
         }
+
+        #region MÉTODOS DE LIBROS
 
         private async Task CargarAutoresAsync()
         {
@@ -146,8 +183,8 @@ namespace BibliotecaDAE.Formularios
                 dt.Load(reader);
 
                 dgvLibros.DataSource = dt;
-                ConfigurarColumnasDataGridView();
-                ActualizarEstadisticas(dt);
+                ConfigurarColumnasLibros();
+                ActualizarEstadisticasLibros(dt);
             }
             catch (Exception ex)
             {
@@ -160,7 +197,7 @@ namespace BibliotecaDAE.Formularios
             }
         }
 
-        private void ConfigurarColumnasDataGridView()
+        private void ConfigurarColumnasLibros()
         {
             if (dgvLibros.Columns.Contains("IdLibros"))
                 dgvLibros.Columns["IdLibros"].Visible = false;
@@ -186,7 +223,7 @@ namespace BibliotecaDAE.Formularios
                 dgvLibros.Columns["EjemplaresDisponibles"].HeaderText = "Disponibles";
         }
 
-        private void ActualizarEstadisticas(DataTable dt)
+        private void ActualizarEstadisticasLibros(DataTable dt)
         {
             int total = dt.Rows.Count;
             int activos = dt.AsEnumerable().Count(row => Convert.ToBoolean(row["Estado"]));
@@ -199,7 +236,7 @@ namespace BibliotecaDAE.Formularios
         {
             if (dgvLibros.SelectedRows.Count == 0)
             {
-                LimpiarCampos();
+                LimpiarCamposLibros();
                 return;
             }
 
@@ -214,9 +251,8 @@ namespace BibliotecaDAE.Formularios
             txtAnio.Text = GetString("AnioPublicacion");
             chkEstado.Checked = Convert.ToBoolean(row.Cells["Estado"].Value);
 
-            btnEliminar.Enabled = true;
+            btnEliminarLibro.Enabled = true;
 
-            // Cargar autor y géneros seleccionados
             await CargarAutorYGenerosSeleccionados(Convert.ToInt32(txtIdLibro.Text));
         }
 
@@ -228,7 +264,6 @@ namespace BibliotecaDAE.Formularios
                 cnn = new Cnn();
                 var cn = cnn.OpenDb();
 
-                // Cargar autor
                 using (var cmdAutor = cn.CreateCommand())
                 {
                     cmdAutor.CommandText = "SELECT IdAutor FROM dbo.AutorLibro WHERE IdLibro = @idLibro";
@@ -241,7 +276,6 @@ namespace BibliotecaDAE.Formularios
                     }
                 }
 
-                // Cargar géneros
                 using (var cmdGeneros = cn.CreateCommand())
                 {
                     cmdGeneros.CommandText = "SELECT IdGenero FROM dbo.GeneroLibro WHERE IdLibro = @idLibro";
@@ -255,7 +289,6 @@ namespace BibliotecaDAE.Formularios
                         generosSeleccionados.Add(reader.GetInt32(0));
                     }
 
-                    // Marcar géneros en CheckedListBox
                     for (int i = 0; i < clbGeneros.Items.Count; i++)
                     {
                         dynamic item = clbGeneros.Items[i];
@@ -276,7 +309,6 @@ namespace BibliotecaDAE.Formularios
 
         private async Task GuardarLibroAsync()
         {
-            // Validaciones
             if (string.IsNullOrWhiteSpace(txtISBN.Text))
             {
                 MessageBox.Show("El ISBN es obligatorio.", "Validación",
@@ -347,7 +379,6 @@ namespace BibliotecaDAE.Formularios
 
                     if (idLibro.HasValue)
                     {
-                        // Actualizar
                         using (var cmd = cn.CreateCommand())
                         {
                             cmd.Transaction = transaction;
@@ -372,7 +403,6 @@ namespace BibliotecaDAE.Formularios
 
                         libroId = idLibro.Value;
 
-                        // Eliminar relaciones anteriores
                         using (var cmdDel = cn.CreateCommand())
                         {
                             cmdDel.Transaction = transaction;
@@ -383,7 +413,6 @@ namespace BibliotecaDAE.Formularios
                     }
                     else
                     {
-                        // Insertar
                         using (var cmd = cn.CreateCommand())
                         {
                             cmd.Transaction = transaction;
@@ -402,7 +431,6 @@ namespace BibliotecaDAE.Formularios
                         }
                     }
 
-                    // Insertar relación con autor
                     using (var cmdAutor = cn.CreateCommand())
                     {
                         cmdAutor.Transaction = transaction;
@@ -412,7 +440,6 @@ namespace BibliotecaDAE.Formularios
                         await cmdAutor.ExecuteNonQueryAsync();
                     }
 
-                    // Insertar relaciones con géneros
                     foreach (dynamic item in clbGeneros.CheckedItems)
                     {
                         using var cmdGenero = cn.CreateCommand();
@@ -429,7 +456,8 @@ namespace BibliotecaDAE.Formularios
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                     await LoadLibrosAsync();
-                    LimpiarCampos();
+                    await CargarLibrosParaEjemplaresAsync(); // Actualizar combo de ejemplares
+                    LimpiarCamposLibros();
                 }
                 catch
                 {
@@ -492,7 +520,8 @@ namespace BibliotecaDAE.Formularios
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 await LoadLibrosAsync();
-                LimpiarCampos();
+                await CargarLibrosParaEjemplaresAsync();
+                LimpiarCamposLibros();
             }
             catch (SqlException ex)
             {
@@ -514,7 +543,7 @@ namespace BibliotecaDAE.Formularios
             }
         }
 
-        private void LimpiarCampos()
+        private void LimpiarCamposLibros()
         {
             txtIdLibro.Clear();
             txtISBN.Clear();
@@ -529,36 +558,413 @@ namespace BibliotecaDAE.Formularios
                 clbGeneros.SetItemChecked(i, false);
             }
 
-            btnEliminar.Enabled = false;
+            btnEliminarLibro.Enabled = false;
             txtISBN.Focus();
         }
 
+        #endregion
+
+        #region MÉTODOS DE EJEMPLARES
+
+        private async Task CargarLibrosParaEjemplaresAsync()
+        {
+            Cnn cnn = null;
+            try
+            {
+                cnn = new Cnn();
+                var cn = cnn.OpenDb();
+
+                using var cmd = cn.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT IdLibros, Titulo + ' (' + ISBN + ')' AS TituloISBN 
+                    FROM dbo.Libros 
+                    WHERE Estado = 1
+                    ORDER BY Titulo";
+
+                var dt = new DataTable();
+                using var reader = await cmd.ExecuteReaderAsync();
+                dt.Load(reader);
+
+                cbLibroEjemplar.DataSource = dt;
+                cbLibroEjemplar.DisplayMember = "TituloISBN";
+                cbLibroEjemplar.ValueMember = "IdLibros";
+                cbLibroEjemplar.SelectedIndex = -1;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error cargando libros: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (cnn != null) cnn.CloseDB();
+            }
+        }
+
+        private void CbLibroEjemplar_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (cbLibroEjemplar.SelectedIndex != -1)
+            {
+                var tituloCompleto = cbLibroEjemplar.Text;
+                var inicio = tituloCompleto.IndexOf(" (");
+                txtTituloLibro.Text = inicio > 0 ? tituloCompleto.Substring(0, inicio) : tituloCompleto;
+            }
+            else
+            {
+                txtTituloLibro.Clear();
+            }
+        }
+
+        private async Task LoadEjemplaresAsync()
+        {
+            var dt = new DataTable();
+            Cnn cnn = null;
+
+            try
+            {
+                cnn = new Cnn();
+                var cn = cnn.OpenDb();
+
+                using var cmd = cn.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT 
+                        e.IdEjemplar,
+                        e.IdLibro,
+                        l.Titulo AS TituloLibro,
+                        l.ISBN,
+                        e.CodigoEjemplar,
+                        e.EstadoEjemplar,
+                        e.FechaAdquisicion,
+                        CASE 
+                            WHEN e.EstadoEjemplar = 'Prestado' THEN 
+                                (SELECT TOP 1 'Préstamo #' + CAST(p.IdPrestamo AS VARCHAR) + ' - ' + 
+                                 lec.Nombre + ' ' + lec.Apellido
+                                 FROM dbo.Prestamo p
+                                 INNER JOIN dbo.Lector lec ON p.IdLector = lec.IdLector
+                                 WHERE p.IdEjemplar = e.IdEjemplar 
+                                   AND p.EstadoPrestamo IN ('Activo', 'Renovado')
+                                 ORDER BY p.IdPrestamo DESC)
+                            ELSE NULL
+                        END AS InfoPrestamo
+                    FROM dbo.Ejemplares e
+                    INNER JOIN dbo.Libros l ON e.IdLibro = l.IdLibros
+                    ORDER BY l.Titulo, e.CodigoEjemplar";
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                dt.Load(reader);
+
+                dgvEjemplares.DataSource = dt;
+                ConfigurarColumnasEjemplares();
+                ActualizarEstadisticasEjemplares(dt);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error cargando ejemplares: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (cnn != null) cnn.CloseDB();
+            }
+        }
+
+        private void ConfigurarColumnasEjemplares()
+        {
+            if (dgvEjemplares.Columns.Contains("IdEjemplar"))
+                dgvEjemplares.Columns["IdEjemplar"].HeaderText = "ID";
+            if (dgvEjemplares.Columns.Contains("IdLibro"))
+                dgvEjemplares.Columns["IdLibro"].Visible = false;
+            if (dgvEjemplares.Columns.Contains("TituloLibro"))
+                dgvEjemplares.Columns["TituloLibro"].HeaderText = "Libro";
+            if (dgvEjemplares.Columns.Contains("ISBN"))
+                dgvEjemplares.Columns["ISBN"].HeaderText = "ISBN";
+            if (dgvEjemplares.Columns.Contains("CodigoEjemplar"))
+                dgvEjemplares.Columns["CodigoEjemplar"].HeaderText = "Código Ejemplar";
+            if (dgvEjemplares.Columns.Contains("EstadoEjemplar"))
+                dgvEjemplares.Columns["EstadoEjemplar"].HeaderText = "Estado";
+            if (dgvEjemplares.Columns.Contains("FechaAdquisicion"))
+            {
+                dgvEjemplares.Columns["FechaAdquisicion"].HeaderText = "Fecha Adquisición";
+                dgvEjemplares.Columns["FechaAdquisicion"].DefaultCellStyle.Format = "dd/MM/yyyy";
+            }
+            if (dgvEjemplares.Columns.Contains("InfoPrestamo"))
+                dgvEjemplares.Columns["InfoPrestamo"].HeaderText = "Info Préstamo";
+        }
+
+        private void ActualizarEstadisticasEjemplares(DataTable dt)
+        {
+            int total = dt.Rows.Count;
+            int disponibles = 0, prestados = 0, danados = 0;
+
+            foreach (DataRow row in dt.Rows)
+            {
+                string estado = row["EstadoEjemplar"].ToString();
+                switch (estado)
+                {
+                    case "Disponible":
+                        disponibles++;
+                        break;
+                    case "Prestado":
+                        prestados++;
+                        break;
+                    case "Dañado":
+                    case "Perdido":
+                        danados++;
+                        break;
+                }
+            }
+
+            lblTotalEjemplares.Text = $"Total: {total}";
+            lblDisponibles.Text = $"Disponibles: {disponibles}";
+            lblDisponibles.ForeColor = Color.Green;
+            lblPrestados.Text = $"Prestados: {prestados}";
+            lblPrestados.ForeColor = Color.Orange;
+            lblDanados.Text = $"Dañados/Perdidos: {danados}";
+            lblDanados.ForeColor = Color.Red;
+        }
+
+        private void DgvEjemplares_SelectionChanged(object? sender, EventArgs e)
+        {
+            if (dgvEjemplares.SelectedRows.Count == 0)
+            {
+                LimpiarCamposEjemplares();
+                return;
+            }
+
+            var row = dgvEjemplares.SelectedRows[0];
+
+            string GetString(string col) => row.Cells[col].Value?.ToString() ?? "";
+
+            txtIdEjemplar.Text = GetString("IdEjemplar");
+            txtCodigoEjemplar.Text = GetString("CodigoEjemplar");
+            txtTituloLibro.Text = GetString("TituloLibro");
+
+            cbLibroEjemplar.SelectedValue = row.Cells["IdLibro"].Value;
+            cbEstadoEjemplar.SelectedItem = GetString("EstadoEjemplar");
+
+            if (DateTime.TryParse(GetString("FechaAdquisicion"), out DateTime fecha))
+                dtpFechaAdquisicion.Value = fecha;
+
+            string estadoActual = GetString("EstadoEjemplar");
+            btnEliminarEjemplar.Enabled = estadoActual != "Prestado";
+
+            if (estadoActual == "Prestado")
+            {
+                btnEliminarEjemplar.Text = "No eliminable";
+                btnEliminarEjemplar.BackColor = Color.LightGray;
+            }
+            else
+            {
+                btnEliminarEjemplar.Text = "Eliminar";
+                btnEliminarEjemplar.BackColor = SystemColors.Control;
+            }
+        }
+
+        private async Task GuardarEjemplarAsync()
+        {
+            if (cbLibroEjemplar.SelectedIndex == -1)
+            {
+                MessageBox.Show("Debe seleccionar un libro.", "Validación",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cbLibroEjemplar.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtCodigoEjemplar.Text))
+            {
+                MessageBox.Show("El código del ejemplar es obligatorio.", "Validación",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtCodigoEjemplar.Focus();
+                return;
+            }
+
+            if (cbEstadoEjemplar.SelectedIndex == -1)
+            {
+                MessageBox.Show("Debe seleccionar un estado.", "Validación",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cbEstadoEjemplar.Focus();
+                return;
+            }
+
+            int idLibro = Convert.ToInt32(cbLibroEjemplar.SelectedValue);
+            string codigo = txtCodigoEjemplar.Text.Trim();
+            string estado = cbEstadoEjemplar.SelectedItem.ToString();
+            DateTime fechaAdquisicion = dtpFechaAdquisicion.Value;
+
+            int? idEjemplar = int.TryParse(txtIdEjemplar.Text, out var id) ? id : (int?)null;
+
+            Cnn cnn = null;
+
+            try
+            {
+                cnn = new Cnn();
+                var cn = cnn.OpenDb();
+
+                using var cmd = cn.CreateCommand();
+
+                if (idEjemplar.HasValue)
+                {
+                    cmd.CommandText = @"
+                        UPDATE dbo.Ejemplares SET
+                            IdLibro = @idLibro,
+                            CodigoEjemplar = @codigo,
+                            EstadoEjemplar = @estado,
+                            FechaAdquisicion = @fecha
+                        WHERE IdEjemplar = @id";
+
+                    cmd.Parameters.AddWithValue("@id", idEjemplar.Value);
+                }
+                else
+                {
+                    cmd.CommandText = @"
+                        INSERT INTO dbo.Ejemplares (IdLibro, CodigoEjemplar, EstadoEjemplar, FechaAdquisicion)
+                        VALUES (@idLibro, @codigo, @estado, @fecha)";
+                }
+
+                cmd.Parameters.AddWithValue("@idLibro", idLibro);
+                cmd.Parameters.AddWithValue("@codigo", codigo);
+                cmd.Parameters.AddWithValue("@estado", estado);
+                cmd.Parameters.AddWithValue("@fecha", fechaAdquisicion);
+
+                await cmd.ExecuteNonQueryAsync();
+
+                MessageBox.Show("Ejemplar guardado correctamente.", "Éxito",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                await LoadEjemplaresAsync();
+                await LoadLibrosAsync(); // Actualizar contadores de ejemplares en libros
+                LimpiarCamposEjemplares();
+            }
+            catch (SqlException ex)
+            {
+                if (ex.Number == 2601 || ex.Number == 2627)
+                    MessageBox.Show("Ya existe un ejemplar con ese código.", "Error de duplicado",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                else
+                    MessageBox.Show($"Error SQL: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (cnn != null) cnn.CloseDB();
+            }
+        }
+
+        private async Task EliminarEjemplarAsync()
+        {
+            if (string.IsNullOrWhiteSpace(txtIdEjemplar.Text))
+            {
+                MessageBox.Show("Debe seleccionar un ejemplar.", "Validación",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var confirmacion = MessageBox.Show(
+                $"¿Está seguro de eliminar el ejemplar '{txtCodigoEjemplar.Text}'?\n\n" +
+                $"Libro: {txtTituloLibro.Text}",
+                "Confirmar Eliminación",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (confirmacion != DialogResult.Yes) return;
+
+            Cnn cnn = null;
+
+            try
+            {
+                cnn = new Cnn();
+                var cn = cnn.OpenDb();
+
+                using var cmd = cn.CreateCommand();
+                cmd.CommandText = "DELETE FROM dbo.Ejemplares WHERE IdEjemplar = @id";
+                cmd.Parameters.AddWithValue("@id", Convert.ToInt32(txtIdEjemplar.Text));
+
+                await cmd.ExecuteNonQueryAsync();
+
+                MessageBox.Show("Ejemplar eliminado correctamente.", "Éxito",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                await LoadEjemplaresAsync();
+                await LoadLibrosAsync();
+                LimpiarCamposEjemplares();
+            }
+            catch (SqlException ex)
+            {
+                if (ex.Number == 547)
+                    MessageBox.Show("No se puede eliminar este ejemplar porque tiene préstamos asociados.",
+                        "Error de integridad", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                else
+                    MessageBox.Show($"Error SQL: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (cnn != null) cnn.CloseDB();
+            }
+        }
+
+        private void LimpiarCamposEjemplares()
+        {
+            txtIdEjemplar.Clear();
+            txtCodigoEjemplar.Clear();
+            txtTituloLibro.Clear();
+            cbLibroEjemplar.SelectedIndex = -1;
+            cbEstadoEjemplar.SelectedIndex = 0;
+            dtpFechaAdquisicion.Value = DateTime.Now;
+
+            btnEliminarEjemplar.Enabled = false;
+            btnEliminarEjemplar.Text = "Eliminar";
+            btnEliminarEjemplar.BackColor = SystemColors.Control;
+            cbLibroEjemplar.Focus();
+        }
+
+        #endregion
+
         private void InitializeComponent()
         {
-            this.Text = "Gestión de Libros";
-            this.ClientSize = new Size(1200, 750);
+            this.Text = "Gestión de Libros y Ejemplares";
+            this.ClientSize = new Size(1300, 800);
             this.StartPosition = FormStartPosition.CenterParent;
             this.Font = new Font("Segoe UI", 9f);
 
-            mainLayout = new TableLayoutPanel
+            // ===== TAB CONTROL PRINCIPAL =====
+            tabControl = new TabControl
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9.5f)
+            };
+
+            // ===== TAB 1: LIBROS =====
+            var tabLibros = new TabPage("Catálogo de Libros");
+
+            var mainLayoutLibros = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
                 RowCount = 2,
                 Padding = new Padding(10)
             };
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+            mainLayoutLibros.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+            mainLayoutLibros.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
 
-            // ===== LISTADO DE LIBROS =====
             gbListadoLibros = new GroupBox
             {
-                Text = "Catálogo de Libros",
+                Text = "Listado de Libros",
                 Dock = DockStyle.Fill,
                 Padding = new Padding(8)
             };
 
-            var panelListado = new Panel { Dock = DockStyle.Fill };
+            var panelListadoLibros = new Panel { Dock = DockStyle.Fill };
 
             dgvLibros = new DataGridView
             {
@@ -571,7 +977,7 @@ namespace BibliotecaDAE.Formularios
                 BackgroundColor = Color.White
             };
 
-            var panelEstadisticas = new FlowLayoutPanel
+            var panelEstadisticasLibros = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
                 Height = 30,
@@ -582,13 +988,11 @@ namespace BibliotecaDAE.Formularios
             lblTotalLibros = new Label { Text = "Total de Libros: 0", AutoSize = true, Margin = new Padding(0, 5, 20, 0), Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
             lblLibrosActivos = new Label { Text = "Libros Activos: 0", AutoSize = true, Margin = new Padding(0, 5, 0, 0), Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = Color.Green };
 
-            panelEstadisticas.Controls.AddRange(new Control[] { lblTotalLibros, lblLibrosActivos });
+            panelEstadisticasLibros.Controls.AddRange(new Control[] { lblTotalLibros, lblLibrosActivos });
+            panelListadoLibros.Controls.Add(dgvLibros);
+            panelListadoLibros.Controls.Add(panelEstadisticasLibros);
+            gbListadoLibros.Controls.Add(panelListadoLibros);
 
-            panelListado.Controls.Add(dgvLibros);
-            panelListado.Controls.Add(panelEstadisticas);
-            gbListadoLibros.Controls.Add(panelListado);
-
-            // ===== DETALLE DEL LIBRO =====
             gbDetalleLibro = new GroupBox
             {
                 Text = "Información del Libro",
@@ -596,7 +1000,7 @@ namespace BibliotecaDAE.Formularios
                 Padding = new Padding(8)
             };
 
-            var formLayout = new TableLayoutPanel
+            var formLayoutLibros = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 4,
@@ -604,73 +1008,205 @@ namespace BibliotecaDAE.Formularios
                 Padding = new Padding(5)
             };
 
-            formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
-            formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
-            formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            formLayoutLibros.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+            formLayoutLibros.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            formLayoutLibros.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+            formLayoutLibros.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
 
             for (int i = 0; i < 5; i++)
-                formLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
+                formLayoutLibros.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
 
-            // Row 0: ISBN / Título
-            formLayout.Controls.Add(new Label { Text = "ISBN:*", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 0);
+            formLayoutLibros.Controls.Add(new Label { Text = "ISBN:*", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 0);
             txtISBN = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, MaxLength = 20 };
-            formLayout.Controls.Add(txtISBN, 1, 0);
+            formLayoutLibros.Controls.Add(txtISBN, 1, 0);
 
-            formLayout.Controls.Add(new Label { Text = "Título:*", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 0);
+            formLayoutLibros.Controls.Add(new Label { Text = "Título:*", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 0);
             txtTitulo = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, MaxLength = 200 };
-            formLayout.Controls.Add(txtTitulo, 3, 0);
+            formLayoutLibros.Controls.Add(txtTitulo, 3, 0);
 
-            // Row 1: Editorial / Año
-            formLayout.Controls.Add(new Label { Text = "Editorial:*", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 1);
+            formLayoutLibros.Controls.Add(new Label { Text = "Editorial:*", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 1);
             txtEditorial = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, MaxLength = 100 };
-            formLayout.Controls.Add(txtEditorial, 1, 1);
+            formLayoutLibros.Controls.Add(txtEditorial, 1, 1);
 
-            formLayout.Controls.Add(new Label { Text = "Año Publ.:*", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 1);
+            formLayoutLibros.Controls.Add(new Label { Text = "Año Publ.:*", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 1);
             txtAnio = new TextBox { Anchor = AnchorStyles.Left, Width = 100, MaxLength = 4 };
-            formLayout.Controls.Add(txtAnio, 3, 1);
+            formLayoutLibros.Controls.Add(txtAnio, 3, 1);
 
-            // Row 2: Autor / Estado
-            formLayout.Controls.Add(new Label { Text = "Autor:*", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 2);
+            formLayoutLibros.Controls.Add(new Label { Text = "Autor:*", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 2);
             cbAutor = new ComboBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, DropDownStyle = ComboBoxStyle.DropDownList };
-            formLayout.Controls.Add(cbAutor, 1, 2);
+            formLayoutLibros.Controls.Add(cbAutor, 1, 2);
 
-            formLayout.Controls.Add(new Label { Text = "Estado:", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 2);
+            formLayoutLibros.Controls.Add(new Label { Text = "Estado:", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 2);
             chkEstado = new CheckBox { Text = "Activo", Checked = true, Anchor = AnchorStyles.Left };
-            formLayout.Controls.Add(chkEstado, 3, 2);
+            formLayoutLibros.Controls.Add(chkEstado, 3, 2);
 
-            // Row 3: Géneros (span 2 columns)
-            formLayout.Controls.Add(new Label { Text = "Géneros:*", Anchor = AnchorStyles.Right | AnchorStyles.Top, AutoSize = true, Margin = new Padding(0, 5, 0, 0) }, 0, 3);
+            formLayoutLibros.Controls.Add(new Label { Text = "Géneros:*", Anchor = AnchorStyles.Right | AnchorStyles.Top, AutoSize = true, Margin = new Padding(0, 5, 0, 0) }, 0, 3);
             clbGeneros = new CheckedListBox { Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top | AnchorStyles.Bottom, CheckOnClick = true };
-            formLayout.Controls.Add(clbGeneros, 1, 3);
-            formLayout.SetColumnSpan(clbGeneros, 3);
+            formLayoutLibros.Controls.Add(clbGeneros, 1, 3);
+            formLayoutLibros.SetColumnSpan(clbGeneros, 3);
 
-            // Row 4: Botones
-            var btnPanel = new FlowLayoutPanel
+            var btnPanelLibros = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.RightToLeft,
                 Dock = DockStyle.Fill,
                 Padding = new Padding(0, 5, 0, 0)
             };
 
-            btnGuardar = new Button { Text = "Guardar", Width = 120, Height = 28 };
-            btnEliminar = new Button { Text = "Eliminar", Width = 100, Height = 28, Enabled = false };
-            btnLimpiar = new Button { Text = "Limpiar", Width = 100, Height = 28 };
-            btnCerrar = new Button { Text = "Cerrar", Width = 100, Height = 28 };
+            btnGuardarLibro = new Button { Text = "Guardar", Width = 120, Height = 28 };
+            btnEliminarLibro = new Button { Text = "Eliminar", Width = 100, Height = 28, Enabled = false };
+            btnLimpiarLibro = new Button { Text = "Limpiar", Width = 100, Height = 28 };
 
-            btnPanel.Controls.AddRange(new Control[] { btnCerrar, btnLimpiar, btnEliminar, btnGuardar });
-            formLayout.Controls.Add(btnPanel, 0, 4);
-            formLayout.SetColumnSpan(btnPanel, 4);
+            btnPanelLibros.Controls.AddRange(new Control[] { btnLimpiarLibro, btnEliminarLibro, btnGuardarLibro });
+            formLayoutLibros.Controls.Add(btnPanelLibros, 0, 4);
+            formLayoutLibros.SetColumnSpan(btnPanelLibros, 4);
 
-            // ID oculto
             txtIdLibro = new TextBox { Visible = false };
 
-            gbDetalleLibro.Controls.Add(formLayout);
+            gbDetalleLibro.Controls.Add(formLayoutLibros);
 
-            mainLayout.Controls.Add(gbListadoLibros, 0, 0);
-            mainLayout.Controls.Add(gbDetalleLibro, 0, 1);
+            mainLayoutLibros.Controls.Add(gbListadoLibros, 0, 0);
+            mainLayoutLibros.Controls.Add(gbDetalleLibro, 0, 1);
 
-            this.Controls.Add(mainLayout);
+            tabLibros.Controls.Add(mainLayoutLibros);
+
+            // ===== TAB 2: EJEMPLARES =====
+            var tabEjemplares = new TabPage("Inventario de Ejemplares");
+
+            var mainLayoutEjemplares = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                Padding = new Padding(10)
+            };
+            mainLayoutEjemplares.RowStyles.Add(new RowStyle(SizeType.Percent, 60f));
+            mainLayoutEjemplares.RowStyles.Add(new RowStyle(SizeType.Percent, 40f));
+
+            gbListadoEjemplares = new GroupBox
+            {
+                Text = "Listado de Ejemplares",
+                Dock = DockStyle.Fill,
+                Padding = new Padding(8)
+            };
+
+            var panelListadoEjemplares = new Panel { Dock = DockStyle.Fill };
+
+            dgvEjemplares = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                AllowUserToAddRows = false,
+                MultiSelect = false,
+                BackgroundColor = Color.White
+            };
+
+            var panelEstadisticasEjemplares = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 30,
+                FlowDirection = FlowDirection.LeftToRight,
+                Padding = new Padding(5)
+            };
+
+            lblTotalEjemplares = new Label { Text = "Total: 0", AutoSize = true, Margin = new Padding(0, 5, 15, 0), Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
+            lblDisponibles = new Label { Text = "Disponibles: 0", AutoSize = true, Margin = new Padding(0, 5, 15, 0), Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
+            lblPrestados = new Label { Text = "Prestados: 0", AutoSize = true, Margin = new Padding(0, 5, 15, 0), Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
+            lblDanados = new Label { Text = "Dañados/Perdidos: 0", AutoSize = true, Margin = new Padding(0, 5, 0, 0), Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
+
+            panelEstadisticasEjemplares.Controls.AddRange(new Control[] { lblTotalEjemplares, lblDisponibles, lblPrestados, lblDanados });
+            panelListadoEjemplares.Controls.Add(dgvEjemplares);
+            panelListadoEjemplares.Controls.Add(panelEstadisticasEjemplares);
+            gbListadoEjemplares.Controls.Add(panelListadoEjemplares);
+
+            gbDetalleEjemplar = new GroupBox
+            {
+                Text = "Información del Ejemplar",
+                Dock = DockStyle.Fill,
+                Padding = new Padding(8)
+            };
+
+            var formLayoutEjemplares = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 4,
+                RowCount = 4,
+                Padding = new Padding(5)
+            };
+
+            formLayoutEjemplares.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
+            formLayoutEjemplares.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            formLayoutEjemplares.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
+            formLayoutEjemplares.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+
+            for (int i = 0; i < 4; i++)
+                formLayoutEjemplares.RowStyles.Add(new RowStyle(SizeType.Absolute, 35));
+
+            formLayoutEjemplares.Controls.Add(new Label { Text = "Libro:*", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 0);
+            cbLibroEjemplar = new ComboBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, DropDownStyle = ComboBoxStyle.DropDownList };
+            formLayoutEjemplares.Controls.Add(cbLibroEjemplar, 1, 0);
+            formLayoutEjemplares.SetColumnSpan(cbLibroEjemplar, 3);
+
+            formLayoutEjemplares.Controls.Add(new Label { Text = "Código:*", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 1);
+            txtCodigoEjemplar = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, MaxLength = 20 };
+            formLayoutEjemplares.Controls.Add(txtCodigoEjemplar, 1, 1);
+
+            formLayoutEjemplares.Controls.Add(new Label { Text = "Estado:*", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 1);
+            cbEstadoEjemplar = new ComboBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, DropDownStyle = ComboBoxStyle.DropDownList };
+            cbEstadoEjemplar.Items.AddRange(new object[] { "Disponible", "Prestado", "Dañado", "Perdido" });
+            formLayoutEjemplares.Controls.Add(cbEstadoEjemplar, 3, 1);
+
+            formLayoutEjemplares.Controls.Add(new Label { Text = "Fecha Adq.:", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 2);
+            dtpFechaAdquisicion = new DateTimePicker { Anchor = AnchorStyles.Left | AnchorStyles.Right, Format = DateTimePickerFormat.Short };
+            formLayoutEjemplares.Controls.Add(dtpFechaAdquisicion, 1, 2);
+
+            formLayoutEjemplares.Controls.Add(new Label { Text = "Título Libro:", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 2);
+            txtTituloLibro = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, ReadOnly = true, BackColor = SystemColors.Control };
+            formLayoutEjemplares.Controls.Add(txtTituloLibro, 3, 2);
+
+            var btnPanelEjemplares = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.RightToLeft,
+                Dock = DockStyle.Fill,
+                Padding = new Padding(0, 5, 0, 0)
+            };
+
+            btnGuardarEjemplar = new Button { Text = "Guardar", Width = 120, Height = 28 };
+            btnEliminarEjemplar = new Button { Text = "Eliminar", Width = 100, Height = 28, Enabled = false };
+            btnLimpiarEjemplar = new Button { Text = "Limpiar", Width = 100, Height = 28 };
+
+            btnPanelEjemplares.Controls.AddRange(new Control[] { btnLimpiarEjemplar, btnEliminarEjemplar, btnGuardarEjemplar });
+            formLayoutEjemplares.Controls.Add(btnPanelEjemplares, 0, 3);
+            formLayoutEjemplares.SetColumnSpan(btnPanelEjemplares, 4);
+
+            txtIdEjemplar = new TextBox { Visible = false };
+
+            gbDetalleEjemplar.Controls.Add(formLayoutEjemplares);
+
+            mainLayoutEjemplares.Controls.Add(gbListadoEjemplares, 0, 0);
+            mainLayoutEjemplares.Controls.Add(gbDetalleEjemplar, 0, 1);
+
+            tabEjemplares.Controls.Add(mainLayoutEjemplares);
+
+            // ===== AGREGAR TABS AL CONTROL =====
+            tabControl.TabPages.Add(tabLibros);
+            tabControl.TabPages.Add(tabEjemplares);
+
+            // ===== PANEL INFERIOR CON BOTÓN CERRAR =====
+            var panelInferior = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 45,
+                FlowDirection = FlowDirection.RightToLeft,
+                Padding = new Padding(10, 8, 10, 8)
+            };
+
+            btnCerrar = new Button { Text = "Cerrar", Width = 100, Height = 28 };
+            panelInferior.Controls.Add(btnCerrar);
+
+            this.Controls.Add(tabControl);
+            this.Controls.Add(panelInferior);
         }
     }
 }

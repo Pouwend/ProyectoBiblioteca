@@ -3,6 +3,14 @@
   "WorkspaceRootPath": "C:\\Biblioteca\\BibliotecaDAE\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|c:\\biblioteca\\bibliotecadae\\bibliotecadae\\formularios\\libros.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|solutionrelative:bibliotecadae\\formularios\\libros.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|c:\\biblioteca\\bibliotecadae\\bibliotecadae\\formularios\\lectores.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|solutionrelative:bibliotecadae\\formularios\\lectores.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|c:\\biblioteca\\bibliotecadae\\bibliotecadae\\formularios\\prestamos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|solutionrelative:bibliotecadae\\formularios\\prestamos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -11,16 +19,8 @@
       "RelativeMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|solutionrelative:bibliotecadae\\formularios\\login.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|c:\\biblioteca\\bibliotecadae\\bibliotecadae\\formularios\\libros.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|solutionrelative:bibliotecadae\\formularios\\libros.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|c:\\biblioteca\\bibliotecadae\\bibliotecadae\\formularios\\prestamodetalle.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|solutionrelative:bibliotecadae\\formularios\\prestamodetalle.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|c:\\biblioteca\\bibliotecadae\\bibliotecadae\\formularios\\lectores.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{893A4030-626B-44AB-A8BB-93E584C74858}|BibliotecaDAE\\BibliotecaDAE.csproj|solutionrelative:bibliotecadae\\formularios\\lectores.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -30,7 +30,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Bookmark",
@@ -38,19 +38,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "Libros.cs",
               "DocumentMoniker": "C:\\Biblioteca\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\Libros.cs",
               "RelativeDocumentMoniker": "BibliotecaDAE\\Formularios\\Libros.cs",
               "ToolTip": "C:\\Biblioteca\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\Libros.cs",
               "RelativeToolTip": "BibliotecaDAE\\Formularios\\Libros.cs",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAAAKMCAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAALsEAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-12T02:46:17.59Z"
+              "WhenOpened": "2025-11-12T02:46:17.59Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "PrestamoDetalle.cs",
               "DocumentMoniker": "C:\\Biblioteca\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\PrestamoDetalle.cs",
               "RelativeDocumentMoniker": "BibliotecaDAE\\Formularios\\PrestamoDetalle.cs",
@@ -62,7 +63,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
               "Title": "Login.cs",
               "DocumentMoniker": "C:\\Biblioteca\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\Login.cs",
               "RelativeDocumentMoniker": "BibliotecaDAE\\Formularios\\Login.cs",
@@ -70,25 +71,23 @@
               "RelativeToolTip": "BibliotecaDAE\\Formularios\\Login.cs",
               "ViewState": "AgIAAEEAAAAAAAAAAAAIwE8AAAAmAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-09T22:56:54.426Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-09T22:56:54.426Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "Prestamos.cs",
               "DocumentMoniker": "C:\\Biblioteca\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\Prestamos.cs",
               "RelativeDocumentMoniker": "BibliotecaDAE\\Formularios\\Prestamos.cs",
               "ToolTip": "C:\\Biblioteca\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\Prestamos.cs",
               "RelativeToolTip": "BibliotecaDAE\\Formularios\\Prestamos.cs",
-              "ViewState": "AgIAAF4BAAAAAAAAAAAiwGsBAAAnAAAAAAAAAA==",
+              "ViewState": "AgIAAF4BAAAAAAAAAAAiwGwBAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-12T00:39:13.154Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-12T00:39:13.154Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 1,
               "Title": "Lectores.cs",
               "DocumentMoniker": "C:\\Biblioteca\\BibliotecaDAE\\BibliotecaDAE\\Formularios\\Lectores.cs",
               "RelativeDocumentMoniker": "BibliotecaDAE\\Formularios\\Lectores.cs",
@@ -96,7 +95,8 @@
               "RelativeToolTip": "BibliotecaDAE\\Formularios\\Lectores.cs",
               "ViewState": "AgIAAA4AAAAAAAAAAAAkwBUAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-10T02:29:30.139Z"
+              "WhenOpened": "2025-11-10T02:29:30.139Z",
+              "EditorCaption": ""
             }
           ]
         }
