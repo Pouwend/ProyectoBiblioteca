@@ -345,7 +345,7 @@ namespace BibliotecaDAE.Formularios
 
         private async void btnPrestamo_Click_1(object sender, EventArgs e)
         {
-            using var detalle = new PrestamoDetalle();
+            using var detalle = new frmPrestamoDetalle();
             detalle.ShowDialog(this);
             await LoadPrestamosAsync();
         }

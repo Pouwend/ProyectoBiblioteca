@@ -8,30 +8,37 @@ using SistemaControlPersonal.Core.Lib;
 
 namespace BibliotecaDAE
 {
-    public class PrestamoDetalle : Form
+    public class frmPrestamoDetalle : Form
     {
-        private DataGridView dgvEjemplares;
-        private TextBox txtNombre, txtApellido, txtDireccion, txtTelefono, txtEmail, txtEdad, txtCarnet, txtDUI, txtIdEjemplar;
-        private ComboBox cbxTipo;
-        private Button btnGuardar, btnLimpiar, btnCerrar;
+        private DataGridView dgvEjemplares, dgvLectores;
+        private TextBox txtIdLector, txtNombreLector, txtIdEjemplar, txtTituloLibro;
+        private DateTimePicker dtpFechaPrestamo, dtpFechaDevolucion;
+        private Button btnRegistrarPrestamo, btnLimpiar, btnCerrar;
         private TableLayoutPanel mainLayout;
-        private GroupBox gbLector, gbEjemplares;
+        private GroupBox gbEjemplares, gbLectores, gbDetallePrestamo;
+        private Label lblPrestamosActivos, lblLimitePrestamos, lblEstadoLector;
 
-        public PrestamoDetalle()
+        public frmPrestamoDetalle()
         {
             InitializeComponent();
             RegisterEvents();
-            // Limpiar campos al iniciar el formulario
             LimpiarCampos();
         }
 
         private void RegisterEvents()
         {
-            this.Load += async (_, __) => await LoadEjemplaresAsync();
+            this.Load += async (_, __) =>
+            {
+                await LoadEjemplaresAsync();
+                await LoadLectoresAsync();
+            };
+
             dgvEjemplares.SelectionChanged += DgvEjemplares_SelectionChanged;
-            btnGuardar.Click += async (_, __) => await GuardarLectorAsync();
+            dgvLectores.SelectionChanged += DgvLectores_SelectionChanged;
+            btnRegistrarPrestamo.Click += async (_, __) => await RegistrarPrestamoAsync();
             btnLimpiar.Click += (_, __) => LimpiarCampos();
             btnCerrar.Click += (_, __) => this.Close();
+            dtpFechaPrestamo.ValueChanged += (_, __) => ActualizarFechaDevolucion();
         }
 
         private async Task LoadEjemplaresAsync()
@@ -45,78 +52,122 @@ namespace BibliotecaDAE
                 var cn = cnn.OpenDb();
 
                 using var cmd = cn.CreateCommand();
-
-                // Query con JOINs para mostrar información completa del libro
                 cmd.CommandText = @"
                     SELECT 
                         e.IdEjemplar,
-                        e.IdLibro,
                         e.CodigoEjemplar,
-                        e.EstadoEjemplar,
-                        e.FechaAdquisicion,
                         lib.Titulo,
-                        STRING_AGG(g.Nombre, ', ') AS Genero
+                        lib.Editorial,
+                        lib.AnioPublicacion,
+                        e.EstadoEjemplar,
+                        STRING_AGG(g.Nombre, ', ') AS Generos
                     FROM dbo.Ejemplares e
                     INNER JOIN dbo.Libros lib ON e.IdLibro = lib.IdLibros
                     LEFT JOIN dbo.GeneroLibro gl ON lib.IdLibros = gl.IdLibro
                     LEFT JOIN dbo.Genero g ON gl.IdGenero = g.IdGenero
-                    WHERE e.EstadoEjemplar = 'Disponible'
-                    GROUP BY e.IdEjemplar, e.IdLibro, e.CodigoEjemplar, e.EstadoEjemplar, e.FechaAdquisicion, lib.Titulo
-                    ORDER BY e.IdEjemplar ASC";
+                    WHERE e.EstadoEjemplar = 'Disponible' AND lib.Estado = 1
+                    GROUP BY e.IdEjemplar, e.CodigoEjemplar, lib.Titulo, lib.Editorial, 
+                             lib.AnioPublicacion, e.EstadoEjemplar
+                    ORDER BY lib.Titulo ASC";
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 dt.Load(reader);
 
                 dgvEjemplares.DataSource = dt;
-
-                // Ajustar el orden y apariencia de las columnas
-                if (dgvEjemplares.Columns.Contains("IdEjemplar"))
-                {
-                    dgvEjemplares.Columns["IdEjemplar"].HeaderText = "ID Ejemplar";
-                    dgvEjemplares.Columns["IdEjemplar"].Width = 90;
-                }
-                if (dgvEjemplares.Columns.Contains("IdLibro"))
-                {
-                    dgvEjemplares.Columns["IdLibro"].HeaderText = "ID Libro";
-                    dgvEjemplares.Columns["IdLibro"].Width = 80;
-                }
-                if (dgvEjemplares.Columns.Contains("CodigoEjemplar"))
-                {
-                    dgvEjemplares.Columns["CodigoEjemplar"].HeaderText = "Código";
-                    dgvEjemplares.Columns["CodigoEjemplar"].Width = 100;
-                }
-                if (dgvEjemplares.Columns.Contains("EstadoEjemplar"))
-                {
-                    dgvEjemplares.Columns["EstadoEjemplar"].HeaderText = "Estado";
-                    dgvEjemplares.Columns["EstadoEjemplar"].Width = 100;
-                }
-                if (dgvEjemplares.Columns.Contains("FechaAdquisicion"))
-                {
-                    dgvEjemplares.Columns["FechaAdquisicion"].HeaderText = "Fecha Adquisición";
-                    dgvEjemplares.Columns["FechaAdquisicion"].Width = 130;
-                }
-                if (dgvEjemplares.Columns.Contains("Titulo"))
-                {
-                    dgvEjemplares.Columns["Titulo"].HeaderText = "Título del Libro";
-                    dgvEjemplares.Columns["Titulo"].Width = 250;
-                }
-                if (dgvEjemplares.Columns.Contains("Genero"))
-                {
-                    dgvEjemplares.Columns["Genero"].HeaderText = "Género(s)";
-                    dgvEjemplares.Columns["Genero"].Width = 150;
-                }
+                ConfigurarColumnasEjemplares();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error cargando Ejemplares: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error cargando ejemplares: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                if (cnn != null)
-                {
-                    cnn.CloseDB();
-                }
+                if (cnn != null) cnn.CloseDB();
             }
+        }
+
+        private async Task LoadLectoresAsync()
+        {
+            var dt = new DataTable();
+            Cnn cnn = null;
+
+            try
+            {
+                cnn = new Cnn();
+                var cn = cnn.OpenDb();
+
+                using var cmd = cn.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT 
+                        l.IdLector,
+                        l.Nombre + ' ' + l.Apellido AS NombreCompleto,
+                        l.Carnet,
+                        l.DUI,
+                        l.TipoUsuario,
+                        l.Estado,
+                        l.LimitePrestamos,
+                        (SELECT COUNT(*) 
+                         FROM dbo.Prestamo p 
+                         WHERE p.IdLector = l.IdLector 
+                           AND p.EstadoPrestamo IN ('Activo', 'Vencido')) AS PrestamosActivos
+                    FROM dbo.Lector l
+                    WHERE l.Estado = 'Activo'
+                    ORDER BY l.Apellido, l.Nombre";
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                dt.Load(reader);
+
+                dgvLectores.DataSource = dt;
+                ConfigurarColumnasLectores();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error cargando lectores: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (cnn != null) cnn.CloseDB();
+            }
+        }
+
+        private void ConfigurarColumnasEjemplares()
+        {
+            if (dgvEjemplares.Columns.Contains("IdEjemplar"))
+                dgvEjemplares.Columns["IdEjemplar"].HeaderText = "ID";
+            if (dgvEjemplares.Columns.Contains("CodigoEjemplar"))
+                dgvEjemplares.Columns["CodigoEjemplar"].HeaderText = "Código";
+            if (dgvEjemplares.Columns.Contains("Titulo"))
+                dgvEjemplares.Columns["Titulo"].HeaderText = "Título";
+            if (dgvEjemplares.Columns.Contains("Editorial"))
+                dgvEjemplares.Columns["Editorial"].HeaderText = "Editorial";
+            if (dgvEjemplares.Columns.Contains("AnioPublicacion"))
+                dgvEjemplares.Columns["AnioPublicacion"].HeaderText = "Año";
+            if (dgvEjemplares.Columns.Contains("EstadoEjemplar"))
+                dgvEjemplares.Columns["EstadoEjemplar"].HeaderText = "Estado";
+            if (dgvEjemplares.Columns.Contains("Generos"))
+                dgvEjemplares.Columns["Generos"].HeaderText = "Género(s)";
+        }
+
+        private void ConfigurarColumnasLectores()
+        {
+            if (dgvLectores.Columns.Contains("IdLector"))
+                dgvLectores.Columns["IdLector"].HeaderText = "ID";
+            if (dgvLectores.Columns.Contains("NombreCompleto"))
+                dgvLectores.Columns["NombreCompleto"].HeaderText = "Nombre Completo";
+            if (dgvLectores.Columns.Contains("Carnet"))
+                dgvLectores.Columns["Carnet"].HeaderText = "Carnet";
+            if (dgvLectores.Columns.Contains("DUI"))
+                dgvLectores.Columns["DUI"].HeaderText = "DUI";
+            if (dgvLectores.Columns.Contains("TipoUsuario"))
+                dgvLectores.Columns["TipoUsuario"].HeaderText = "Tipo";
+            if (dgvLectores.Columns.Contains("Estado"))
+                dgvLectores.Columns["Estado"].HeaderText = "Estado";
+            if (dgvLectores.Columns.Contains("LimitePrestamos"))
+                dgvLectores.Columns["LimitePrestamos"].HeaderText = "Límite";
+            if (dgvLectores.Columns.Contains("PrestamosActivos"))
+                dgvLectores.Columns["PrestamosActivos"].HeaderText = "Activos";
         }
 
         private void DgvEjemplares_SelectionChanged(object? sender, EventArgs e)
@@ -124,52 +175,61 @@ namespace BibliotecaDAE
             if (dgvEjemplares.SelectedRows.Count == 0) return;
             var row = dgvEjemplares.SelectedRows[0];
 
-            // Obtener el IdEjemplar de la fila seleccionada
-            if (row.Cells["IdEjemplar"].Value != null && row.Cells["IdEjemplar"].Value != DBNull.Value)
-            {
-                txtIdEjemplar.Text = row.Cells["IdEjemplar"].Value.ToString();
-            }
-            else
-            {
-                txtIdEjemplar.Text = string.Empty;
-            }
+            txtIdEjemplar.Text = row.Cells["IdEjemplar"].Value?.ToString() ?? "";
+            txtTituloLibro.Text = row.Cells["Titulo"].Value?.ToString() ?? "";
         }
 
-        private async Task GuardarLectorAsync()
+        private void DgvLectores_SelectionChanged(object? sender, EventArgs e)
         {
-            // Validaciones básicas
-            if (string.IsNullOrWhiteSpace(txtNombre.Text) || string.IsNullOrWhiteSpace(txtApellido.Text))
+            if (dgvLectores.SelectedRows.Count == 0) return;
+            var row = dgvLectores.SelectedRows[0];
+
+            txtIdLector.Text = row.Cells["IdLector"].Value?.ToString() ?? "";
+            txtNombreLector.Text = row.Cells["NombreCompleto"].Value?.ToString() ?? "";
+
+            // Actualizar información del lector
+            var prestamosActivos = row.Cells["PrestamosActivos"].Value?.ToString() ?? "0";
+            var limitePrestamos = row.Cells["LimitePrestamos"].Value?.ToString() ?? "0";
+            var estado = row.Cells["Estado"].Value?.ToString() ?? "";
+
+            lblPrestamosActivos.Text = $"Préstamos Activos: {prestamosActivos}";
+            lblLimitePrestamos.Text = $"Límite: {limitePrestamos}";
+            lblEstadoLector.Text = $"Estado: {estado}";
+
+            // Cambiar color según estado
+            lblEstadoLector.ForeColor = estado == "Activo" ? Color.Green : Color.Red;
+        }
+
+        private void ActualizarFechaDevolucion()
+        {
+            // Por defecto, 7 días después de la fecha de préstamo
+            dtpFechaDevolucion.Value = dtpFechaPrestamo.Value.AddDays(7);
+        }
+
+        private async Task RegistrarPrestamoAsync()
+        {
+            // Validaciones
+            if (string.IsNullOrWhiteSpace(txtIdLector.Text))
             {
-                MessageBox.Show("Nombre y Apellido son obligatorios.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Debe seleccionar un lector.", "Validación",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // Validación: TipoUsuario es obligatorio
-            if (cbxTipo.SelectedIndex == -1)
+            if (string.IsNullOrWhiteSpace(txtIdEjemplar.Text))
             {
-                MessageBox.Show("Debe seleccionar un Tipo de Usuario.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                cbxTipo.Focus();
+                MessageBox.Show("Debe seleccionar un ejemplar.", "Validación",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // Validación: Al menos Carnet o DUI debe estar presente
-            var carnet = string.IsNullOrWhiteSpace(txtCarnet.Text) ? null : txtCarnet.Text.Trim();
-            var dui = string.IsNullOrWhiteSpace(txtDUI.Text) ? null : txtDUI.Text.Trim();
-
-            if (carnet == null && dui == null)
+            if (!int.TryParse(txtIdLector.Text, out int idLector) ||
+                !int.TryParse(txtIdEjemplar.Text, out int idEjemplar))
             {
-                MessageBox.Show("Debe ingresar al menos el Carnet o el DUI del lector.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("IDs inválidos.", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-
-            var nombre = txtNombre.Text.Trim();
-            var apellido = txtApellido.Text.Trim();
-            var direccion = string.IsNullOrWhiteSpace(txtDireccion.Text) ? null : txtDireccion.Text.Trim();
-            var telefono = string.IsNullOrWhiteSpace(txtTelefono.Text) ? null : txtTelefono.Text.Trim();
-            var email = string.IsNullOrWhiteSpace(txtEmail.Text) ? null : txtEmail.Text.Trim();
-            int? edad = null;
-            if (int.TryParse(txtEdad.Text, out var eVal)) edad = eVal;
-            var tipo = cbxTipo.SelectedItem?.ToString();
 
             Cnn cnn = null;
 
@@ -178,145 +238,156 @@ namespace BibliotecaDAE
                 cnn = new Cnn();
                 var cn = cnn.OpenDb();
 
-                // Verificar si ya existe un lector con ese DUI o Carnet
-                int? existingId = null;
-                if (!string.IsNullOrWhiteSpace(dui))
+                // 1. Verificar estado del lector
+                using (var cmdLector = cn.CreateCommand())
                 {
-                    using var cmdCheck = cn.CreateCommand();
-                    cmdCheck.CommandText = "SELECT TOP 1 IdLector FROM dbo.Lector WHERE DUI = @dui";
-                    cmdCheck.Parameters.AddWithValue("@dui", dui);
-                    var obj = await cmdCheck.ExecuteScalarAsync();
-                    if (obj != null && obj != DBNull.Value) existingId = Convert.ToInt32(obj);
+                    cmdLector.CommandText = @"
+                        SELECT Estado, LimitePrestamos,
+                            (SELECT COUNT(*) FROM dbo.Prestamo 
+                             WHERE IdLector = @idLector 
+                               AND EstadoPrestamo IN ('Activo', 'Vencido')) AS PrestamosActivos
+                        FROM dbo.Lector 
+                        WHERE IdLector = @idLector";
+
+                    cmdLector.Parameters.AddWithValue("@idLector", idLector);
+
+                    using var reader = await cmdLector.ExecuteReaderAsync();
+                    if (await reader.ReadAsync())
+                    {
+                        var estado = reader["Estado"].ToString();
+                        var limite = Convert.ToInt32(reader["LimitePrestamos"]);
+                        var activos = Convert.ToInt32(reader["PrestamosActivos"]);
+
+                        if (estado != "Activo")
+                        {
+                            MessageBox.Show("El lector está inactivo. No se puede realizar el préstamo.",
+                                "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        if (activos >= limite)
+                        {
+                            MessageBox.Show($"El lector ha alcanzado su límite de {limite} préstamos activos.",
+                                "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Lector no encontrado.", "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
                 }
 
-                if (!existingId.HasValue && !string.IsNullOrWhiteSpace(carnet))
+                // 2. Verificar estado del ejemplar
+                using (var cmdEjemplar = cn.CreateCommand())
                 {
-                    using var cmdCheck = cn.CreateCommand();
-                    cmdCheck.CommandText = "SELECT TOP 1 IdLector FROM dbo.Lector WHERE Carnet = @carnet";
-                    cmdCheck.Parameters.AddWithValue("@carnet", carnet);
-                    var obj = await cmdCheck.ExecuteScalarAsync();
-                    if (obj != null && obj != DBNull.Value) existingId = Convert.ToInt32(obj);
+                    cmdEjemplar.CommandText = @"
+                        SELECT EstadoEjemplar 
+                        FROM dbo.Ejemplares 
+                        WHERE IdEjemplar = @idEjemplar";
+
+                    cmdEjemplar.Parameters.AddWithValue("@idEjemplar", idEjemplar);
+
+                    var estadoEjemplar = await cmdEjemplar.ExecuteScalarAsync();
+
+                    if (estadoEjemplar == null || estadoEjemplar.ToString() != "Disponible")
+                    {
+                        MessageBox.Show("El ejemplar no está disponible.", "Validación",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        await LoadEjemplaresAsync(); // Refrescar la lista
+                        return;
+                    }
                 }
 
-                if (existingId.HasValue)
+                // 3. Registrar el préstamo
+                using (var cmdPrestamo = cn.CreateCommand())
                 {
-                    // Actualizar lector existente
-                    using var cmdUpd = cn.CreateCommand();
-                    cmdUpd.CommandText = @"
-                        UPDATE dbo.Lector SET
-                            Nombre = @nombre,
-                            Apellido = @apellido,
-                            Direccion = @direccion,
-                            Telefono = @telefono,
-                            Email = @email,
-                            Edad = @edad,
-                            Carnet = @carnet,
-                            DUI = @dui,
-                            TipoUsuario = @tipo
-                        WHERE IdLector = @id";
+                    cmdPrestamo.CommandText = @"
+                        INSERT INTO dbo.Prestamo 
+                            (IdUsuario, IdLector, IdEjemplar, FechaPrestamo, 
+                             FechaDevolucionEstimada, EstadoPrestamo)
+                        VALUES 
+                            (@idUsuario, @idLector, @idEjemplar, @fechaPrestamo, 
+                             @fechaDevolucion, 'Activo')";
 
-                    cmdUpd.Parameters.Add(new SqlParameter("@nombre", SqlDbType.NVarChar, 50) { Value = nombre });
-                    cmdUpd.Parameters.Add(new SqlParameter("@apellido", SqlDbType.NVarChar, 50) { Value = apellido });
-                    cmdUpd.Parameters.Add(new SqlParameter("@direccion", SqlDbType.NVarChar, 200) { Value = (object?)direccion ?? DBNull.Value });
-                    cmdUpd.Parameters.Add(new SqlParameter("@telefono", SqlDbType.NVarChar, 20) { Value = (object?)telefono ?? DBNull.Value });
-                    cmdUpd.Parameters.Add(new SqlParameter("@email", SqlDbType.NVarChar, 100) { Value = (object?)email ?? DBNull.Value });
-                    cmdUpd.Parameters.Add(new SqlParameter("@edad", SqlDbType.Int) { Value = (object?)edad ?? DBNull.Value });
-                    cmdUpd.Parameters.Add(new SqlParameter("@carnet", SqlDbType.NVarChar, 20) { Value = (object?)carnet ?? DBNull.Value });
-                    cmdUpd.Parameters.Add(new SqlParameter("@dui", SqlDbType.NVarChar, 10) { Value = (object?)dui ?? DBNull.Value });
-                    cmdUpd.Parameters.Add(new SqlParameter("@tipo", SqlDbType.NVarChar, 20) { Value = tipo });
-                    cmdUpd.Parameters.AddWithValue("@id", existingId.Value);
+                    cmdPrestamo.Parameters.AddWithValue("@idUsuario", SesionUsuario.IdUsuario);
+                    cmdPrestamo.Parameters.AddWithValue("@idLector", idLector);
+                    cmdPrestamo.Parameters.AddWithValue("@idEjemplar", idEjemplar);
+                    cmdPrestamo.Parameters.AddWithValue("@fechaPrestamo", dtpFechaPrestamo.Value);
+                    cmdPrestamo.Parameters.AddWithValue("@fechaDevolucion", dtpFechaDevolucion.Value);
 
-                    var rows = await cmdUpd.ExecuteNonQueryAsync();
-                    MessageBox.Show(rows > 0 ? "Lector actualizado correctamente." : "No se actualizó el lector.", "Resultado", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                else
-                {
-                    // Insertar nuevo lector
-                    using var cmdIns = cn.CreateCommand();
-                    cmdIns.CommandText = @"
-                        INSERT INTO dbo.Lector
-                            (Nombre, Apellido, Direccion, Telefono, Email, Edad, Carnet, DUI, TipoUsuario)
-                        VALUES
-                            (@nombre, @apellido, @direccion, @telefono, @email, @edad, @carnet, @dui, @tipo)";
-
-                    cmdIns.Parameters.Add(new SqlParameter("@nombre", SqlDbType.NVarChar, 50) { Value = nombre });
-                    cmdIns.Parameters.Add(new SqlParameter("@apellido", SqlDbType.NVarChar, 50) { Value = apellido });
-                    cmdIns.Parameters.Add(new SqlParameter("@direccion", SqlDbType.NVarChar, 200) { Value = (object?)direccion ?? DBNull.Value });
-                    cmdIns.Parameters.Add(new SqlParameter("@telefono", SqlDbType.NVarChar, 20) { Value = (object?)telefono ?? DBNull.Value });
-                    cmdIns.Parameters.Add(new SqlParameter("@email", SqlDbType.NVarChar, 100) { Value = (object?)email ?? DBNull.Value });
-                    cmdIns.Parameters.Add(new SqlParameter("@edad", SqlDbType.Int) { Value = (object?)edad ?? DBNull.Value });
-                    cmdIns.Parameters.Add(new SqlParameter("@carnet", SqlDbType.NVarChar, 20) { Value = (object?)carnet ?? DBNull.Value });
-                    cmdIns.Parameters.Add(new SqlParameter("@dui", SqlDbType.NVarChar, 10) { Value = (object?)dui ?? DBNull.Value });
-                    cmdIns.Parameters.Add(new SqlParameter("@tipo", SqlDbType.NVarChar, 20) { Value = tipo });
-
-                    var rows = await cmdIns.ExecuteNonQueryAsync();
-                    MessageBox.Show(rows > 0 ? "Lector creado correctamente." : "No se guardó el lector.", "Resultado", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    await cmdPrestamo.ExecuteNonQueryAsync();
                 }
 
+                // 4. Actualizar estado del ejemplar a "Prestado"
+                using (var cmdUpdate = cn.CreateCommand())
+                {
+                    cmdUpdate.CommandText = @"
+                        UPDATE dbo.Ejemplares 
+                        SET EstadoEjemplar = 'Prestado' 
+                        WHERE IdEjemplar = @idEjemplar";
+
+                    cmdUpdate.Parameters.AddWithValue("@idEjemplar", idEjemplar);
+                    await cmdUpdate.ExecuteNonQueryAsync();
+                }
+
+                MessageBox.Show("Préstamo registrado exitosamente.", "Éxito",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // Refrescar listas
+                await LoadEjemplaresAsync();
+                await LoadLectoresAsync();
                 LimpiarCampos();
-            }
-            catch (SqlException ex)
-            {
-                // Manejo específico de errores de SQL
-                if (ex.Number == 2601 || ex.Number == 2627) // Violación de índice único
-                {
-                    MessageBox.Show("Ya existe un lector registrado con ese Carnet o DUI.", "Error de duplicado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-                else if (ex.Number == 547) // Violación de CHECK constraint
-                {
-                    MessageBox.Show("Los datos no cumplen con las restricciones de la base de datos. Verifique que al menos ingresó Carnet o DUI.", "Error de validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-                else
-                {
-                    MessageBox.Show("Error SQL: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error al registrar préstamo: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                if (cnn != null)
-                {
-                    cnn.CloseDB();
-                }
+                if (cnn != null) cnn.CloseDB();
             }
         }
 
         private void LimpiarCampos()
         {
-            txtNombre.Clear();
-            txtApellido.Clear();
-            txtDireccion.Clear();
-            txtTelefono.Clear();
-            txtEmail.Clear();
-            txtEdad.Clear();
-            txtCarnet.Clear();
-            txtDUI.Clear();
+            txtIdLector.Clear();
+            txtNombreLector.Clear();
             txtIdEjemplar.Clear();
-            cbxTipo.SelectedIndex = -1;
-            txtNombre.Focus();
+            txtTituloLibro.Clear();
+
+            dtpFechaPrestamo.Value = DateTime.Now;
+            dtpFechaDevolucion.Value = DateTime.Now.AddDays(7);
+
+            lblPrestamosActivos.Text = "Préstamos Activos: -";
+            lblLimitePrestamos.Text = "Límite: -";
+            lblEstadoLector.Text = "Estado: -";
+            lblEstadoLector.ForeColor = Color.Black;
         }
 
         private void InitializeComponent()
         {
-            this.Text = "Detalle de Préstamo / Lector";
-            this.ClientSize = new Size(1000, 700);
+            this.Text = "Registrar Nuevo Préstamo";
+            this.ClientSize = new Size(1200, 750);
             this.StartPosition = FormStartPosition.CenterParent;
             this.Font = new Font("Segoe UI", 9f);
 
             mainLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 1,
+                ColumnCount = 2,
                 RowCount = 2,
                 Padding = new Padding(10),
             };
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 60f));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 40f));
 
-            // GroupBox para Ejemplares
+            // Panel de Ejemplares (arriba izquierda)
             gbEjemplares = new GroupBox
             {
                 Text = "Ejemplares Disponibles",
@@ -337,10 +408,31 @@ namespace BibliotecaDAE
 
             gbEjemplares.Controls.Add(dgvEjemplares);
 
-            // GroupBox para Lector
-            gbLector = new GroupBox
+            // Panel de Lectores (arriba derecha)
+            gbLectores = new GroupBox
             {
-                Text = "Información del Lector",
+                Text = "Lectores Activos",
+                Dock = DockStyle.Fill,
+                Padding = new Padding(8)
+            };
+
+            dgvLectores = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                AllowUserToAddRows = false,
+                MultiSelect = false,
+                BackgroundColor = Color.White
+            };
+
+            gbLectores.Controls.Add(dgvLectores);
+
+            // Panel de Detalle del Préstamo (abajo, span 2 columnas)
+            gbDetallePrestamo = new GroupBox
+            {
+                Text = "Detalle del Préstamo",
                 Dock = DockStyle.Fill,
                 Padding = new Padding(8)
             };
@@ -350,82 +442,85 @@ namespace BibliotecaDAE
                 Dock = DockStyle.Fill,
                 ColumnCount = 4,
                 RowCount = 5,
-                AutoSize = true
+                Padding = new Padding(5)
             };
-            formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+            formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
             formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+            formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
             formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
 
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+            for (int i = 0; i < 5; i++)
+                formLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 35));
 
-            // Row 0
-            formLayout.Controls.Add(new Label { Text = "Nombre:*", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 0);
-            txtNombre = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, MaxLength = 50 };
-            formLayout.Controls.Add(txtNombre, 1, 0);
+            // Row 0: ID Lector / Nombre Lector
+            formLayout.Controls.Add(new Label { Text = "ID Lector:", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 0);
+            txtIdLector = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, ReadOnly = true, BackColor = SystemColors.Control };
+            formLayout.Controls.Add(txtIdLector, 1, 0);
 
-            formLayout.Controls.Add(new Label { Text = "Apellido:*", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 0);
-            txtApellido = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, MaxLength = 50 };
-            formLayout.Controls.Add(txtApellido, 3, 0);
+            formLayout.Controls.Add(new Label { Text = "Nombre:", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 0);
+            txtNombreLector = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, ReadOnly = true, BackColor = SystemColors.Control };
+            formLayout.Controls.Add(txtNombreLector, 3, 0);
 
-            // Row 1
-            formLayout.Controls.Add(new Label { Text = "Dirección:", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 1);
-            txtDireccion = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, MaxLength = 200 };
-            formLayout.Controls.Add(txtDireccion, 1, 1);
-
-            formLayout.Controls.Add(new Label { Text = "Teléfono:", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 1);
-            txtTelefono = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, MaxLength = 20 };
-            formLayout.Controls.Add(txtTelefono, 3, 1);
-
-            // Row 2
-            formLayout.Controls.Add(new Label { Text = "Email:", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 2);
-            txtEmail = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, MaxLength = 100 };
-            formLayout.Controls.Add(txtEmail, 1, 2);
-
-            formLayout.Controls.Add(new Label { Text = "Edad:", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 2);
-            txtEdad = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, MaxLength = 3 };
-            formLayout.Controls.Add(txtEdad, 3, 2);
-
-            // Row 3
-            formLayout.Controls.Add(new Label { Text = "N° Carnet:", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 3);
-            txtCarnet = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, MaxLength = 20 };
-            formLayout.Controls.Add(txtCarnet, 1, 3);
-
-            formLayout.Controls.Add(new Label { Text = "DUI:", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 3);
-            txtDUI = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, MaxLength = 10 };
-            formLayout.Controls.Add(txtDUI, 3, 3);
-
-            // Row 4
-            formLayout.Controls.Add(new Label { Text = "Id Ejemplar:", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 4);
+            // Row 1: ID Ejemplar / Título
+            formLayout.Controls.Add(new Label { Text = "ID Ejemplar:", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 1);
             txtIdEjemplar = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, ReadOnly = true, BackColor = SystemColors.Control };
-            formLayout.Controls.Add(txtIdEjemplar, 1, 4);
+            formLayout.Controls.Add(txtIdEjemplar, 1, 1);
 
-            formLayout.Controls.Add(new Label { Text = "Tipo:*", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 4);
-            cbxTipo = new ComboBox { Anchor = AnchorStyles.Left, DropDownStyle = ComboBoxStyle.DropDownList, Width = 140 };
-            cbxTipo.Items.AddRange(new object[] { "Docente", "Estudiante" });
-            formLayout.Controls.Add(cbxTipo, 3, 4);
+            formLayout.Controls.Add(new Label { Text = "Título:", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 1);
+            txtTituloLibro = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, ReadOnly = true, BackColor = SystemColors.Control };
+            formLayout.Controls.Add(txtTituloLibro, 3, 1);
 
+            // Row 2: Fechas
+            formLayout.Controls.Add(new Label { Text = "Fecha Préstamo:", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 2);
+            dtpFechaPrestamo = new DateTimePicker { Anchor = AnchorStyles.Left | AnchorStyles.Right, Format = DateTimePickerFormat.Short };
+            formLayout.Controls.Add(dtpFechaPrestamo, 1, 2);
+
+            formLayout.Controls.Add(new Label { Text = "Fecha Devolución:", Anchor = AnchorStyles.Right, AutoSize = true }, 2, 2);
+            dtpFechaDevolucion = new DateTimePicker { Anchor = AnchorStyles.Left | AnchorStyles.Right, Format = DateTimePickerFormat.Short };
+            formLayout.Controls.Add(dtpFechaDevolucion, 3, 2);
+
+            // Row 3: Estado del Lector
+            formLayout.Controls.Add(new Label { Text = "Info Lector:", Anchor = AnchorStyles.Right, AutoSize = true }, 0, 3);
+
+            var panelInfoLector = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+
+            lblEstadoLector = new Label { Text = "Estado: -", AutoSize = true, Margin = new Padding(0, 5, 10, 0) };
+            lblPrestamosActivos = new Label { Text = "Préstamos Activos: -", AutoSize = true, Margin = new Padding(0, 5, 10, 0) };
+            lblLimitePrestamos = new Label { Text = "Límite: -", AutoSize = true, Margin = new Padding(0, 5, 0, 0) };
+
+            panelInfoLector.Controls.AddRange(new Control[] { lblEstadoLector, lblPrestamosActivos, lblLimitePrestamos });
+            formLayout.Controls.Add(panelInfoLector, 1, 3);
+            formLayout.SetColumnSpan(panelInfoLector, 3);
+
+            // Row 4: Botones
             var btnPanel = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.RightToLeft,
-                Dock = DockStyle.Bottom,
-                Height = 40,
-                Padding = new Padding(0, 6, 0, 0)
+                Dock = DockStyle.Fill,
+                Padding = new Padding(0, 5, 0, 0)
             };
-            btnGuardar = new Button { Text = "Guardar Lector", Width = 120, Height = 28 };
+
+            btnRegistrarPrestamo = new Button { Text = "Registrar Préstamo", Width = 140, Height = 28 };
             btnLimpiar = new Button { Text = "Limpiar", Width = 100, Height = 28 };
             btnCerrar = new Button { Text = "Cerrar", Width = 100, Height = 28 };
-            btnPanel.Controls.AddRange(new Control[] { btnCerrar, btnLimpiar, btnGuardar });
 
-            gbLector.Controls.Add(formLayout);
-            gbLector.Controls.Add(btnPanel);
+            btnPanel.Controls.AddRange(new Control[] { btnCerrar, btnLimpiar, btnRegistrarPrestamo });
 
+            formLayout.Controls.Add(btnPanel, 0, 4);
+            formLayout.SetColumnSpan(btnPanel, 4);
+
+            gbDetallePrestamo.Controls.Add(formLayout);
+
+            // Agregar todo al layout principal
             mainLayout.Controls.Add(gbEjemplares, 0, 0);
-            mainLayout.Controls.Add(gbLector, 0, 1);
+            mainLayout.Controls.Add(gbLectores, 1, 0);
+            mainLayout.Controls.Add(gbDetallePrestamo, 0, 1);
+            mainLayout.SetColumnSpan(gbDetallePrestamo, 2);
 
             this.Controls.Add(mainLayout);
         }

@@ -280,8 +280,7 @@ namespace Biblioteca
                     cnn.CloseDB();
                 }
             }
-        }
- 
+        } 
 
         private void InitializeComponent()
         {

@@ -158,7 +158,6 @@ C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\bin\Debug\net8.0-windows\runtimes\win\
 C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\bin\Debug\net8.0-windows\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
 C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\BibliotecaDAE.csproj.AssemblyReference.cache
 C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\BibliotecaDAE.frmLogin.resources
-C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\BibliotecaDAE.PrestamoDetalle.resources
 C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\BibliotecaDAE.Formularios.frmPrestamos.resources
 C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\BibliotecaDAE.csproj.GenerateResource.cache
 C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\BibliotecaDAE.GeneratedMSBuildEditorConfig.editorconfig
@@ -263,3 +262,4 @@ C:\Users\julia\Desktop\Proyecto\ProyectoBiblioteca\BibliotecaDAE\BibliotecaDAE\o
 C:\Users\julia\Desktop\Proyecto\ProyectoBiblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\ref\BibliotecaDAE.dll
 C:\Users\julia\Desktop\Proyecto\ProyectoBiblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\Biblioteca.FrmLectores.resources
 C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\Biblioteca.FrmLectores.resources
+C:\Biblioteca\BibliotecaDAE\BibliotecaDAE\obj\Debug\net8.0-windows\BibliotecaDAE.frmPrestamoDetalle.resources

@@ -80,7 +80,7 @@ namespace BibliotecaDAE
                         cnn.CloseDB();
 
                         this.Hide();
-                        using var f = new frmPrestamos();
+                        using var f = new BibliotecaDAE.Formularios.frmPrestamos();
                         f.ShowDialog(this);
                         this.Close();
                     }
@@ -104,7 +104,7 @@ namespace BibliotecaDAE
                 MessageBox.Show("Error al conectar/leer la base de datos: " + ex.Message,
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            finally
+            finally 
             {
                 if (cnn != null)
                 {
