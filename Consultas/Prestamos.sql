@@ -8,7 +8,6 @@ CREATE TABLE Prestamo (
     FechaDevolucionEstimada DATETIME NOT NULL,
     FechaDevolucionReal DATETIME NULL,
     EstadoPrestamo NVARCHAR(20) DEFAULT 'Activo',
-    Observaciones NVARCHAR(200),
     
     CONSTRAINT FK_Prestamo_Usuario FOREIGN KEY (IdUsuario) 
         REFERENCES Usuario(IdUsuario),
