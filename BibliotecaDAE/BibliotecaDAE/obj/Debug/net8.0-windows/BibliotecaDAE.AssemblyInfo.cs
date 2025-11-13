@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BibliotecaDAE")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a6990496c8c01b994295476a0bb66f4c18b7d18f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c022de55399dd38064ec8128641387ede896a588")]
 [assembly: System.Reflection.AssemblyProductAttribute("BibliotecaDAE")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BibliotecaDAE")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -21,6 +21,8 @@ namespace BibliotecaDAE
             // Configura 'Enter' para que active el botón de entrar
             this.AcceptButton = btnEntrar;
             txtUsuario.Focus();
+
+            txtContraseña.UseSystemPasswordChar = true;
         }
 
         private async void btnEntrar_Click_1(object sender, EventArgs e)
